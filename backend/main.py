@@ -4,9 +4,11 @@ from typing import Optional, List
 from google.cloud import firestore
 from datetime import datetime, timezone
 import asyncio
+from dotenv import load_dotenv 
 import os
 
 app = FastAPI()
+load_dotenv()
 
 # エミュレータ判定
 if os.getenv("FIRESTORE_EMULATOR_HOST"):

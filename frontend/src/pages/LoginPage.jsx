@@ -5,15 +5,41 @@ import { TextButton } from "../components/TextButton";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../hooks/useUser";
 import { useState } from "react";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebaseConfig";
 
 export const LoginPage = () => {
   const { email, setEmail } = useUser();
-  const [password, setPassword] = useState(""); // パスワードはローカルな状態で管理
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    console.log({ email, password });
-    navigate("/profile");
+  // const handleLogin = () => {
+  //   console.log({ email, password });
+  //   navigate("/profile");
+  // };
+
+  // 既存ユーザーのログイン
+  const handleLogin = async () => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("✅ ログイン成功:", userCredential.user.email);
+      navigate("/profile"); // ログイン後ページへ
+    } catch (error) {
+      alert("ログインに失敗しました: " + error.message);
+    }
+  };
+
+  // 新規登録
+  const handleRegister = async () => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("🆕 新規登録成功:", userCredential.user.email);
+
+      // ここでプロフィール初期設定画面へ遷移
+      navigate("/profile-setup");
+    } catch (error) {
+      alert("新規登録に失敗しました: " + error.message);
+    }
   };
 
   return (
@@ -34,7 +60,9 @@ export const LoginPage = () => {
         <TextButton w="100%" onClick={handleLogin}>
           ログイン
         </TextButton>
-        <TextButton w="100%">あたらしくはじめる</TextButton>
+        <TextButton w="100%" onClick={handleRegister}>
+          あたらしくはじめる
+        </TextButton>
       </VStack>
     </Box>
   );
