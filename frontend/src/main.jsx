@@ -2,10 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import App from "./App.jsx";
-import { LoginPage } from "./pages/LoginPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
-import "./index.css";
+import App from './App.jsx'
+import {InputPage} from './pages/InputPage.jsx'
+import {LoginPage} from './pages/LoginPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
+import './index.css'
 
 // 1. ChakraProvider をインポートします
 import { ChakraProvider } from "@chakra-ui/react";
@@ -14,8 +15,12 @@ import { Post } from "./components/Post.jsx";
 
 const router = createBrowserRouter([
   {
-    path: "/", // ルートURL (例: http://localhost:5173/)
-    element: <LoginPage />, // 最初に見せたいページ
+    path: '/', // ルートURL (例: http://localhost:5173/)
+    element: <InputPage />, // 最初に見せたいページ
+  },
+  {
+    path: '/input',
+    element: <LoginPage />, // InputPageコンポーネントを表示
   },
   {
     path: "/profile", // /profile というパス
