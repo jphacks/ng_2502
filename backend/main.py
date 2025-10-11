@@ -23,7 +23,7 @@ app.add_middleware(
 
 import os, json
 from google.oauth2 import service_account
-from google.cloud import firestore
+
 
 cred_json = os.environ.get("GOOGLE_CREDENTIALS")  # ← ここは環境変数の名前に合わせて！
 info = json.loads(cred_json)
