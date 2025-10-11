@@ -2,11 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import App from './App.jsx'
-import {InputPage} from './pages/InputPage.jsx'
-import {LoginPage} from './pages/LoginPage.jsx'
-import ProfilePage from './pages/ProfilePage.jsx'
-import './index.css'
+import App from "./App.jsx";
+import { InputPage } from "./pages/InputPage.jsx";
+import { LoginPage } from "./pages/LoginPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import "./index.css";
 
 // 1. ChakraProvider をインポートします
 import { ChakraProvider } from "@chakra-ui/react";
@@ -14,27 +14,41 @@ import theme from "./theme/theme.js";
 import { Post } from "./components/Post.jsx";
 import { UserProvider } from "./components/UserProvider.jsx";
 import { PostPage } from "./pages/PostPage.jsx";
+import { ListPage } from "./pages/ListPage.jsx";
+import { Layout } from "./components/Layout.jsx";
 
 const router = createBrowserRouter([
   {
-    path: '/', // ルートURL (例: http://localhost:5173/)
-    element: <InputPage />, // 最初に見せたいページ
+    // ヘッダーが不要なページ
+    path: "/",
+    element: <LoginPage />,
   },
   {
-    path: '/input',
-    element: <LoginPage />, // InputPageコンポーネントを表示
+    path: "input", // /input
+    element: <InputPage />,
   },
   {
-    path: "/profile", // /profile というパス
-    element: <ProfilePage />, // ProfilePageコンポーネントを表示
-  },
-  {
-    path: "/test",
-    element: <Post />,
-  },
-  {
-    path: "/post",
-    element: <PostPage />,
+    // ヘッダーを表示したいページ群
+    path: "/",
+    element: <Layout />,
+    children: [
+      {
+        path: "list", // /list
+        element: <ListPage />,
+      },
+      {
+        path: "profile", // /profile
+        element: <ProfilePage />,
+      },
+      {
+        path: "post", // /post
+        element: <PostPage />,
+      },
+      {
+        path: "test",
+        element: <Post />,
+      },
+    ],
   },
 ]);
 
