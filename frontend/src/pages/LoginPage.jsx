@@ -3,15 +3,16 @@ import AppIcon from "../assets/AppIcon.png";
 import { InputText } from "../components/InputText";
 import { TextButton } from "../components/TextButton";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../hooks/useUser";
 import { useState } from "react";
 
 export const LoginPage = () => {
-  const [mailAdress, setMailAdress] = useState("");
-  const [password, setPassword] = useState("");
+  const { email, setEmail } = useUser();
+  const [password, setPassword] = useState(""); // パスワードはローカルな状態で管理
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    console.log({ mailAdress, password });
+    console.log({ email, password });
     navigate("/profile");
   };
 
@@ -21,8 +22,8 @@ export const LoginPage = () => {
         <Image src={AppIcon} alt="アプリケーションアイコン" boxSize="120px" />
         <InputText
           placeholder="メールアドレス"
-          value={mailAdress}
-          onChange={(e) => setMailAdress(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
         <InputText
           placeholder="パスワード"
