@@ -1,21 +1,26 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
-
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA_IuIjcwlfH24BYRMoh-xiYt58Zir_LPw",
-  authDomain: "jphacks-ng-2502.firebaseapp.com",
-  projectId: "jphacks-ng-2502",
-  storageBucket: "jphacks-ng-2502.firebasestorage.app",
-  messagingSenderId: "406884758333",
-  appId: "1:406884758333:web:525f4fa294326715770b54",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+if (location.hostname === "localhost") {
+  connectFirestoreEmulator(db, "localhost", 8080);
+  connectAuthEmulator(auth, "http://localhost:9099");
+  connectStorageEmulator(storage, "localhost", 9199);
+}
 
 // 各サービスをエクスポートして、他のファイルで使えるようにする
 export const db = getFirestore(app);
