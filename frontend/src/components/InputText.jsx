@@ -1,7 +1,7 @@
 // src/components/InputText.jsx
 
-import { FormControl, FormLabel, Input } from '@chakra-ui/react';
-import React from 'react';
+import { FormControl, FormLabel, Input } from "@chakra-ui/react";
+import React from "react";
 
 // propsを直接受け取る
 export const InputText = (props) => {
@@ -12,7 +12,12 @@ export const InputText = (props) => {
     <FormControl>
       <FormLabel>{label}</FormLabel>
       {/* placeholderやvalueなどはrest経由でInputに渡されます */}
-      <Input {...rest} />
+      <Input
+        borderColor="#FFB433"
+        focusBorderColor="#FFB433"
+        _hover={{ borderColor: "#FFB433" }}
+        {...rest}
+      />
     </FormControl>
   );
 };
