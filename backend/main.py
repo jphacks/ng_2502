@@ -25,11 +25,21 @@ import os, json
 from google.oauth2 import service_account
 
 
-cred_json = os.environ.get("GOOGLE_CREDENTIALS")  # ← ここは環境変数の名前に合わせて！
+print("🔍 環境変数の読み込み開始")
+cred_json = os.environ.get("GOOGLE_CREDENTIALS")
+if cred_json is None:
+    raise ValueError("環境変数 GOOGLE_CREDENTIALS が設定されていません！")
+print("✅ 環境変数取得成功")
+
 info = json.loads(cred_json)
+print("✅ JSONパース成功")
+
 credentials = service_account.Credentials.from_service_account_info(info)
+print("✅ 認証情報作成成功")
 
 db = firestore.Client(credentials=credentials)
+print("✅ Firestoreクライアント作成成功")
+
 
 @app.get("/")
 def root():
