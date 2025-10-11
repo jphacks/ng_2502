@@ -8,6 +8,24 @@ import os
 
 app = FastAPI()
 
+
+# 👇 このすぐ下に追加！
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 本番は限定したほうが安全！ 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def root():
+    return {"message": "API is running!"}
+
+
+
 # エミュレータ判定
 if os.getenv("FIRESTORE_EMULATOR_HOST"):
     print("🔥 Firestore Emulator に接続しています:", os.getenv("FIRESTORE_EMULATOR_HOST"))
