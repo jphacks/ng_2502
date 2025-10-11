@@ -12,6 +12,8 @@ import './index.css'
 import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme/theme.js";
 import { Post } from "./components/Post.jsx";
+import { UserProvider } from "./components/UserProvider.jsx";
+import { PostPage } from "./pages/PostPage.jsx";
 
 const router = createBrowserRouter([
   {
@@ -30,13 +32,19 @@ const router = createBrowserRouter([
     path: "/test",
     element: <Post />,
   },
+  {
+    path: "/post",
+    element: <PostPage />,
+  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     {/* 2. <App /> コンポーネント全体を <ChakraProvider> で囲みます */}
     <ChakraProvider theme={theme}>
-      <RouterProvider router={router} />
+      <UserProvider>
+        <RouterProvider router={router} />
+      </UserProvider>
     </ChakraProvider>
   </React.StrictMode>
 );
