@@ -93,18 +93,30 @@ export const InputPage = () => {
         </Flex>
 
         {/* 2. メインの入力エリア (残りの高さいっぱいに広げる) */}
-        <Flex flex="1" my={4}>
-          <ProfileIcon src={src} alt={alt} name="自分" size="md" />
-          <PostInput
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="こんな発見したよ！"
-            variant="unstyled" // 枠線を消す
-            fontSize="lg"
-            ml={4}
-            height="100%"
-            resize="none" // リサイズハンドルを消す
-          />
+        <Flex flex="1" my={4} direction="column">
+          <Flex flex="1">
+            <ProfileIcon src={src} alt={alt} name="自分" size="md" />
+            <PostInput
+              value={text}
+              onChange={(e) => {
+                const inputText = e.target.value;
+                // 1. 140文字を超えていたら、それ以上入力させない
+                if (inputText.length <= 140) {
+                  setText(inputText);
+                }
+              }}
+              placeholder="こんな発見したよ！"
+              variant="unstyled" // 枠線を消す
+              fontSize="lg"
+              ml={4}
+              height="100%"
+              resize="none" // リサイズハンドルを消す
+            />
+          </Flex>
+          
+          <Flex justify="flex-end" color={text.length > 140 ? "red.500" : "gray.500"}>
+            {text.length} / 140
+          </Flex>
         </Flex>
 
         {/* 3. 下部のアイコンボタン */}
