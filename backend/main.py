@@ -20,6 +20,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+import os, json
+from google.oauth2 import service_account
+from google.cloud import firestore
+
+cred_json = os.environ.get("GOOGLE_CREDENTIALS")  # ← ここは環境変数の名前に合わせて！
+info = json.loads(cred_json)
+credentials = service_account.Credentials.from_service_account_info(info)
+
+db = firestore.Client(credentials=credentials)
+
 @app.get("/")
 def root():
     return {"message": "API is running!"}
