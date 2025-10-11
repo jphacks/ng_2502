@@ -6,6 +6,8 @@ import App from "./App.jsx";
 import { InputPage } from "./pages/InputPage.jsx";
 import { LoginPage } from "./pages/LoginPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import { PostPage } from "./pages/PostPage.jsx";
+import { ListPage } from "./pages/ListPage.jsx";
 import "./index.css";
 
 // 1. ChakraProvider をインポートします
@@ -13,8 +15,6 @@ import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme/theme.js";
 import { Post } from "./components/Post.jsx";
 import { UserProvider } from "./components/UserProvider.jsx";
-import { PostPage } from "./pages/PostPage.jsx";
-import { ListPage } from "./pages/ListPage.jsx";
 import { Layout } from "./components/Layout.jsx";
 
 const router = createBrowserRouter([
@@ -28,6 +28,10 @@ const router = createBrowserRouter([
     element: <InputPage />,
   },
   {
+    path: "profile", // /profile
+    element: <ProfilePage />,
+  },
+  {
     // ヘッダーを表示したいページ群
     path: "/",
     element: <Layout />,
@@ -35,10 +39,6 @@ const router = createBrowserRouter([
       {
         path: "list", // /list
         element: <ListPage />,
-      },
-      {
-        path: "profile", // /profile
-        element: <ProfilePage />,
       },
       {
         path: "post", // /post
