@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
 import App from './App.jsx'
-import LoginPage from './pages/LoginPage.jsx'
+import {InputPage} from './pages/InputPage.jsx'
+import {LoginPage} from './pages/LoginPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import './index.css'
 
@@ -14,7 +15,11 @@ import theme from './theme/theme.js'
 const router = createBrowserRouter([
   {
     path: '/', // ルートURL (例: http://localhost:5173/)
-    element: <LoginPage />, // 最初に見せたいページ
+    element: <InputPage />, // 最初に見せたいページ
+  },
+  {
+    path: '/input',
+    element: <LoginPage />, // InputPageコンポーネントを表示
   },
   {
     path: '/profile', // /profile というパス
