@@ -5,7 +5,7 @@ import {
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
 import { FaImage, FaCamera } from 'react-icons/fa';
-import { ProfileIcon } from '../components/ProfileIcon'; // パスは構成に合わせてください
+import { ProfileIcon } from '../components/ProfileIcon';
 import { PostInput } from '../components/PostInput';
 import { TextButton } from '../components/TextButton';
 import { MarkButton } from '../components/MarkButton';
@@ -109,7 +109,7 @@ export const InputPage = () => {
 
         {/* 3. 下部のアイコンボタン */}
         <HStack spacing={4}>
-          <MarkButton label="Camera" icon={<FaImage />} />
+          <MarkButton label="Image" icon={<FaImage />} />
           <MarkButton label="Camera" icon={<FaCamera />} />
         </HStack>
       </Flex>
