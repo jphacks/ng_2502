@@ -88,7 +88,7 @@ export const InputPage = () => {
             onClick={handleSubmit}
             isDisabled={!text.trim()} // テキストが空かスペースのみの場合は無効
           >
-            とうこうする
+            とうこう
           </TextButton>
         </Flex>
 
