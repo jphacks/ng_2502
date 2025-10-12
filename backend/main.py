@@ -34,6 +34,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os, json
+from google.oauth2 import service_account
+print(":虫眼鏡: 環境変数の読み込み開始")
+cred_json = os.environ.get("GOOGLE_CREDENTIALS")
+if cred_json is None:
+    raise ValueError("環境変数 GOOGLE_CREDENTIALS が設定されていません！")
+print(":チェックマーク_緑: 環境変数取得成功")
+info = json.loads(cred_json)
+print(":チェックマーク_緑: JSONパース成功")
+credentials = service_account.Credentials.from_service_account_info(info)
+print(":チェックマーク_緑: 認証情報作成成功")
+
 # --- Firestoreクライアントの初期化 ---
 # エミュレータ判定
 if os.getenv("FIRESTORE_EMULATOR_HOST"):
