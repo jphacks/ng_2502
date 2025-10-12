@@ -1,1 +1,11 @@
-firebase_functions~=0.1.0
+# FastAPI関連
+fastapi==0.111.0
+uvicorn==0.29.0
+
+# Google Cloud & AI 関連
+google-cloud-firestore==2.16.0
+google-generativeai==0.5.4
+firebase-admin==6.5.0
+
+# 環境変数管理
+python-dotenv==1.0.1
