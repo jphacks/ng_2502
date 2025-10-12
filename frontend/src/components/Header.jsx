@@ -56,7 +56,7 @@ export const Header = () => {
       </Box>
       <Box flex="1" display="flex" justifyContent="flex-end">
         <Link to="/input">
-          <TextButton>とうこう</TextButton>
+          <TextButton>つくる</TextButton>
         </Link>
       </Box>
     </Flex>
