@@ -41,7 +41,7 @@ if os.getenv("FIRESTORE_EMULATOR_HOST"):
     db = firestore.Client(project="myfirstfirebase-440d6")
 else:
     print("⚠️ 本番Firestoreに接続しています")
-    db = firestore.Client()
+    db = firestore.Client(credentials=credentials)
 
 # --- Pydanticモデルの定義 ---
 class PostCreate(BaseModel):
