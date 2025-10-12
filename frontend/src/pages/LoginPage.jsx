@@ -12,7 +12,7 @@ import {
 import { auth } from "../firebaseConfig";
 import { WhiteTextButton } from "../components/WhiteTextButton";
 
-export const LoginPage = () => {
+const LoginPage = () => {
   const { email, setEmail } = useUser();
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -90,3 +90,5 @@ export const LoginPage = () => {
     </Box>
   );
 };
+
+export default LoginPage;

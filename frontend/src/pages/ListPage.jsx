@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { VStack, Text, Spinner, Center } from "@chakra-ui/react";
 import { Post } from "../components/Post";
-import { useUser } from "../hooks/useUser";
 import { db, auth } from "../firebase";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 
-export const ListPage = () => {
-  const { email, iconColor } = useUser();
+const ListPage = () => {
   const [posts, setPosts] = useState([
     // 初期デモデータを入れておく（Firestoreが動かなくても見える）
     {
       id: "demo1",
-      user: { email: "demo@example.com", iconColor: "gray" },
+      user: { username: "demo@example.com", iconColor: "gray" },
       content: "Firestore接続中...（これはデモです）",
     },
   ]);
@@ -83,3 +81,5 @@ export const ListPage = () => {
     </VStack>
   );
 };
+
+export default ListPage;
