@@ -1,29 +1,31 @@
 from firebase_functions import auth_fn
 from firebase_admin import initialize_app, firestore
 
+# アプリを初期化
 initialize_app()
 
+# この @auth_fn.on_user_created が「ユーザーが作成されたら」という合図
 @auth_fn.on_user_created
 def create_user_profile(user: auth_fn.UserRecord) -> None:
     """
-    Firebase Authenticationに新しいユーザーが作成されたのをきっかけに、
-    Firestoreにそのユーザーのプロフィールデータ（初期状態）を作成する。
+    新しいユーザーが作成された際に、Firestoreにそのユーザー用の
+    プロフィールデータを作成する。
     """
-    db = firestore.client()
+    try:
+        print(f"✅ 関数がトリガーされました: UID={user.uid}, Email={user.email}")
+        
+        db = firestore.client()
+        user_ref = db.collection("users").document(user.uid)
+        
+        user_ref.set({
+            "email": user.email,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+            "username": "（未設定）",
+            "iconColor": "blue", # アイコンの色の初期値
+            "mode": "じゆう"     # モードの初期値
+        })
+        
+        print(f"✅ Firestoreにプロフィールを作成しました: {user.uid}")
 
-    # Authenticationから取得したユーザーUIDをドキュメントIDとして使用
-    user_ref = db.collection("users").document(user.uid)
-    
-    # 保存する初期データ
-    user_ref.set({
-        # 【email】 Authenticationの情報からコピー
-        "email": user.email,
-        # 【createdAt】 サーバーのタイムスタンプを記録
-        "createdAt": firestore.SERVER_TIMESTAMP,
-        # 【username】 最初は未設定であることが分かるようにしておく
-        "username": "（未設定）",
-        # 【profileImageUrl】 最初は空欄またはデフォルト画像のURLを入れておく
-        "profileImageUrl": None 
-    })
-    
-    print(f"Firestoreにユーザープロフィールを作成しました: {user.uid}")
+    except Exception as e:
+        print(f"❌ エラーが発生しました: {e}")
