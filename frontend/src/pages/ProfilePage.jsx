@@ -7,15 +7,15 @@ import {
   Button,
   Wrap,
   WrapItem,
-} from '@chakra-ui/react';
-import React, { useState } from 'react';
-import { InputText } from '../components/InputText.jsx';
-import { TextButton } from '../components/TextButton.jsx';
-import { ProfileButton } from '../components/ProfileButton.jsx';
-import { ProfileIcon } from '../components/ProfileIcon.jsx';
-import { useUser } from '../hooks/useUser';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+} from "@chakra-ui/react";
+import React, { useState } from "react";
+import { InputText } from "../components/InputText.jsx";
+import { TextButton } from "../components/TextButton.jsx";
+import { ProfileButton } from "../components/ProfileButton.jsx";
+import { ProfileIcon } from "../components/ProfileIcon.jsx";
+import { useUser } from "../hooks/useUser";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 // --- アイコンのインポートと対応表 ---
 import BlueIcon from "../assets/UserIcon_Blue.png";
@@ -27,16 +27,17 @@ import OliveIcon from "../assets/UserIcon_Olive.png";
 import PurpleIcon from "../assets/UserIcon_Purple.png";
 import RedIcon from "../assets/UserIcon_Red.png";
 import YellowIcon from "../assets/UserIcon_Yellow.png";
+import { WhiteTextButton } from "../components/WhiteTextButton.jsx";
 
 const iconMap = {
-  blue:   { src: BlueIcon,   alt: "Blue Icon" },
-  cream:  { src: CreamIcon,  alt: "Cream Icon" },
-  green:  { src: GreenIcon,  alt: "Green Icon" },
-  mint:   { src: MintIcon,   alt: "Mint Icon" },
-  navy:   { src: NavyIcon,   alt: "Navy Icon" },
-  olive:  { src: OliveIcon,  alt: "Olive Icon" },
+  blue: { src: BlueIcon, alt: "Blue Icon" },
+  cream: { src: CreamIcon, alt: "Cream Icon" },
+  green: { src: GreenIcon, alt: "Green Icon" },
+  mint: { src: MintIcon, alt: "Mint Icon" },
+  navy: { src: NavyIcon, alt: "Navy Icon" },
+  olive: { src: OliveIcon, alt: "Olive Icon" },
   purple: { src: PurpleIcon, alt: "Purple Icon" },
-  red:    { src: RedIcon,    alt: "Red Icon" },
+  red: { src: RedIcon, alt: "Red Icon" },
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
@@ -80,10 +81,18 @@ export const ProfilePage = () => {
       <VStack spacing={8} align="stretch">
         {/* 1. 上部のナビゲーションバー */}
         <Flex justify="space-between" align="center">
-          <TextButton variant="outline" borderRadius="full" onClick={() => navigate('/list')}>
+          <WhiteTextButton
+            variant="outline"
+            borderRadius="full"
+            onClick={() => navigate("/list")}
+          >
             やめる
-          </TextButton>
-          <TextButton colorScheme="orange" borderRadius="full" onClick={handleSave}>
+          </WhiteTextButton>
+          <TextButton
+            colorScheme="orange"
+            borderRadius="full"
+            onClick={handleSave}
+          >
             けってい
           </TextButton>
         </Flex>
@@ -119,7 +128,12 @@ export const ProfilePage = () => {
 
         {/* 3. アイコン選択エリア */}
         <VStack>
-          <Text color="#FFB433" fontSize={{ base: "18px", sm: "20px", lg: "22px" }}>アイコンをえらんでね</Text>
+          <Text
+            color="#FFB433"
+            fontSize={{ base: "18px", sm: "20px", lg: "22px" }}
+          >
+            アイコンをえらんでね
+          </Text>
           <Wrap spacing={4} justify="center">
             {Object.keys(iconMap).map((color) => (
               <WrapItem key={color}>
@@ -132,7 +146,10 @@ export const ProfilePage = () => {
                   p="2px"
                   _focus={{ outline: 'none', boxShadow: 'none' }}
                 >
-                  <ProfileIcon src={iconMap[color].src} size={{ base: 'md', sm: 'lg', lg: 'xl' }} />
+                  <ProfileIcon
+                    src={iconMap[color].src}
+                    size={{ base: "md", sm: "lg", lg: "xl" }}
+                  />
                 </Box>
               </WrapItem>
             ))}
@@ -141,23 +158,27 @@ export const ProfilePage = () => {
 
         {/* 4. モード選択エリア */}
         <VStack>
-          <Text color="#FFB433" fontSize={{ base: "18px", sm: "20px", lg: "22px" }}>モードをえらんでね</Text>
+          <Text
+            color="#FFB433"
+            fontSize={{ base: "18px", sm: "20px", lg: "22px" }}
+          >
+            モードをえらんでね
+          </Text>
           <HStack>
             <ProfileButton
-              onClick={() => setMode('てんさく')}
-              isActive={mode === 'てんさく'}
+              onClick={() => setMode("てんさく")}
+              isActive={mode === "てんさく"}
             >
               てんさく
             </ProfileButton>
             <ProfileButton
-              onClick={() => setMode('じゆう')}
-              isActive={mode === 'じゆう'}
+              onClick={() => setMode("じゆう")}
+              isActive={mode === "じゆう"}
             >
               じゆう
             </ProfileButton>
           </HStack>
         </VStack>
-
       </VStack>
     </Box>
   );

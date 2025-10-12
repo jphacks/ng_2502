@@ -41,7 +41,7 @@ export const Post = ({
   isComment = false,
 }) => {
   const [isLiked, setIsLiked] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
   // post propがない場合は何も表示しない
@@ -55,9 +55,10 @@ export const Post = ({
     setIsLiked(!isLiked);
   };
 
+  // コメントボタン押下時にpostpageへ遷移し、InputCommentを開くフラグを渡す
   const handleCommentClick = (e) => {
-    e.stopPropagation(); // 親要素へのイベント伝播を停止
-    onOpen();
+    e.stopPropagation();
+    navigate("/post", { state: { post: post, openComment: true } });
   };
 
   const handlePostClick = () => {
@@ -80,7 +81,7 @@ export const Post = ({
           <CircleIcon src={src} alt={alt} />
           <VStack align="start" spacing={0}>
             <Text fontWeight="bold" fontSize={{ base: "sm", md: "md" }}>
-              {user.email || "ユーザー名"}
+              {user.username || "ユーザー名"}
             </Text>
           </VStack>
         </HStack>
@@ -109,11 +110,14 @@ export const Post = ({
         </HStack>
         <Divider borderColor="#80CBC4" />
       </VStack>
-      <InputComment
-        isOpen={isOpen}
-        onClose={onClose}
-        onCommentSubmit={onCommentSubmit}
-      />
+      {/* isCommentがtrueのときだけInputCommentを表示 */}
+      {isComment && (
+        <InputComment
+          isOpen={isOpen}
+          onClose={onClose}
+          onCommentSubmit={onCommentSubmit}
+        />
+      )}
     </>
   );
 };
