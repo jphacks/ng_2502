@@ -31,7 +31,7 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-export const InputPage = () => {
+const InputPage = () => {
   const [text, setText] = useState("");
   const navigate = useNavigate();
 
@@ -124,3 +124,5 @@ export const InputPage = () => {
     </Box>
   );
 };
+
+export default InputPage;
