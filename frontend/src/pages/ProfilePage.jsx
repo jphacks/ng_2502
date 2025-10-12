@@ -41,7 +41,7 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-export const ProfilePage = () => {
+const ProfilePage = () => {
   // --- Contextから取得する変数に別名をつける ---
   const {
     username: globalUsername,
@@ -188,3 +188,5 @@ export const ProfilePage = () => {
     </Box>
   );
 };
+
+export default ProfilePage;

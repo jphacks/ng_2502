@@ -8,7 +8,7 @@ import { InputComment } from "../components/InputComment";
 import { useDisclosure } from "@chakra-ui/react";
 import { useEffect } from "react";
 
-export const PostPage = () => {
+const PostPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { post, openComment } = location.state || {}; // openCommentを受け取る
@@ -78,3 +78,5 @@ export const PostPage = () => {
     </VStack>
   );
 };
+
+export default PostPage;
