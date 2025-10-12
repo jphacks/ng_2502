@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { Outlet } from "react-router-dom";
 import { Header } from "./Header";
 
-export const Layout = () => {
+const Layout = () => {
   return (
     <Box>
       <Header />
@@ -12,3 +12,5 @@ export const Layout = () => {
     </Box>
   );
 };
+
+export default Layout;
