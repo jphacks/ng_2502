@@ -5,7 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App.jsx";
 import { InputPage } from "./pages/InputPage.jsx";
 import { LoginPage } from "./pages/LoginPage.jsx";
-import {ProfilePage} from "./pages/ProfilePage.jsx";
+import { ProfilePage } from "./pages/ProfilePage.jsx";
 import { PostPage } from "./pages/PostPage.jsx";
 import { ListPage } from "./pages/ListPage.jsx";
 import "./index.css";
@@ -14,7 +14,7 @@ import "./index.css";
 import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme/theme.js";
 import { Post } from "./components/Post.jsx";
-import { UserProvider } from "./components/UserProvider.jsx";
+import { UserProvider } from "./context/UserContext.jsx";
 import { Layout } from "./components/Layout.jsx";
 
 const router = createBrowserRouter([
@@ -23,6 +23,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <LoginPage />,
   },
+
   {
     path: "input", // /input
     element: <InputPage />,
