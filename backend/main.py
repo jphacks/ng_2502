@@ -60,7 +60,7 @@ if os.getenv("FIRESTORE_EMULATOR_HOST"):
     db = firestore.Client(project="myfirstfirebase-440d6") # myfirstfirebase-440d6
 else:
     print("⚠️ 本番Firestoreに接続しています")
-    db = firestore.Client()
+    db = firestore.Client(credentials=credentials)
 
 class PostCreate(BaseModel):
     userId: str
