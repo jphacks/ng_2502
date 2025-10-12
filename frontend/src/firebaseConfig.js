@@ -1,6 +1,6 @@
 // src/firebaseConfig.ts
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "fake-api-key", // Emulator用なのでダミーでOK
@@ -15,8 +15,6 @@ export const auth = getAuth(app);
 
 // --- Emulatorに接続 ---
 if (window.location.hostname === "localhost") {
-  import("firebase/auth").then(({ connectAuthEmulator }) => {
-    connectAuthEmulator(auth, "http://127.0.0.1:9099");
-    console.log("🔥 Firebase Auth Emulatorに接続中");
-  });
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  console.log("🔥 Firebase Auth Emulatorに接続中");
 }
