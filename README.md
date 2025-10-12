@@ -1,4 +1,4 @@
-#SNR(ソナー)～SNSの一歩前～
+# SNR(ソナー)～SNSの一歩前～
 
 [デモ動画はこちら！](https://drive.google.com/file/d/10oL42NqFYXPN8nvh4iXJTcGyFMOccN7U/view?usp=drive_link)
 
