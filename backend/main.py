@@ -11,6 +11,11 @@ app = FastAPI()
 load_dotenv()
 
 
+
+
+
+
+
 # 👇 このすぐ下に追加！
 from fastapi.middleware.cors import CORSMiddleware
 
