@@ -44,8 +44,6 @@ print("✅ JSONパース成功")
 credentials = service_account.Credentials.from_service_account_info(info)
 print("✅ 認証情報作成成功")
 
-db = firestore.Client(credentials=credentials)
-print("✅ Firestoreクライアント作成成功")
 
 
 @app.get("/")
