@@ -5,9 +5,13 @@ import { CircleIcon } from "./CircleIcon";
 import AppIconNoText from "../assets/AppIconNotext.png";
 import { TextButton } from "./TextButton";
 import { useUser } from "../hooks/useUser";
+// --- アイコンのインポートと対応表 ---
 import BlueIcon from "../assets/UserIcon_Blue.png";
 import CreamIcon from "../assets/UserIcon_Cream.png";
 import GreenIcon from "../assets/UserIcon_Green.png";
+import MintIcon from "../assets/UserIcon_Mint.png";
+import NavyIcon from "../assets/UserIcon_Navy.png";
+import OliveIcon from "../assets/UserIcon_Olive.png";
 import PurpleIcon from "../assets/UserIcon_Purple.png";
 import RedIcon from "../assets/UserIcon_Red.png";
 import YellowIcon from "../assets/UserIcon_Yellow.png";
@@ -16,6 +20,9 @@ const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
   cream: { src: CreamIcon, alt: "Cream Icon" },
   green: { src: GreenIcon, alt: "Green Icon" },
+  mint: { src: MintIcon, alt: "Mint Icon" },
+  navy: { src: NavyIcon, alt: "Navy Icon" },
+  olive: { src: OliveIcon, alt: "Olive Icon" },
   purple: { src: PurpleIcon, alt: "Purple Icon" },
   red: { src: RedIcon, alt: "Red Icon" },
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
