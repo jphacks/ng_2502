@@ -35,7 +35,7 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-export const Post = ({
+const Post = ({
   post,
   onCommentSubmit = () => {},
   isComment = false,
@@ -121,3 +121,7 @@ export const Post = ({
     </>
   );
 };
+
+export { Post };
+
+export default Post;
