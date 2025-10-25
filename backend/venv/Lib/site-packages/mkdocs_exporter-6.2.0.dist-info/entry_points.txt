@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+exporter=mkdocs_exporter.plugin:Plugin
+
