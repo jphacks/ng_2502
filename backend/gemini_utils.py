@@ -111,3 +111,46 @@ async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> li
         except Exception:
             comments.append("いいね！😄")
     return comments
+
+async def revise_post_for_safety(original_post: str, ng_reason: str) -> str:
+    """
+    不適切と判断された投稿を、NG理由に基づいて安全な内容に修正（添削）します。
+    """
+    if not gemini_model:
+        # AIモデルが利用できない場合
+        return "エラー: AIモデルが初期化されていません。"
+
+    prompt = f"""
+あなたはSNSのコンテンツモデレーターです。
+以下の『元の投稿』は、『NG理由』に基づき不適切と判定されました。
+
+元の投稿の意図をできるだけ維持しつつ、『NG理由』で指摘された問題点を修正し、安全で適切な内容の投稿に書き換えてください。
+
+【ルール】
+- 修正後の投稿本文のみを出力してください。
+- 挨拶、前置き、修正内容の説明は一切不要です。
+- 元の投稿の主要な意図は保持してください。
+- 投稿は小学生でも理解できる、平易な言葉遣い（ひらがな、カタカナ、簡単な漢字）で記述してください。
+
+【元の投稿】
+{original_post}
+
+【NG理由】
+{ng_reason}
+
+【修正後の投稿】
+"""
+    try:
+        response = await gemini_model.generate_content_async(prompt)
+        revised_post = response.text.strip()
+        
+        if not revised_post:
+            # AIが空の回答を返した場合
+            return "エラー: 修正案の生成に失敗しました。元の投稿を確認してください。"
+        
+        return revised_post
+        
+    except Exception as e:
+        print(f"Error during post revision: {e}")
+        # エラーが発生した場合
+        return f"エラー: 修正中に予期せぬ問題が発生しました。 ({e})"
