@@ -4,3 +4,31 @@ __pycache__/
 # Python virtual environment
 venv/
 *.local
+
+# Python/FastAPI specific
+
+# Virtual environment
+/venv
+/.venv
+/env
+/.env
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Distribution / packaging
+/dist/
+/build/
+/*.egg-info/
+
+# Unit test reports
+.pytest_cache/
+.coverage
+
+# Environment variables
+.env
+
+# IDE settings folder
+.idea/
+.vscode/

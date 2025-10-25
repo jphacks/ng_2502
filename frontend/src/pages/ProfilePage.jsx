@@ -15,7 +15,7 @@ import { ProfileButton } from "../components/ProfileButton.jsx";
 import { ProfileIcon } from "../components/ProfileIcon.jsx";
 import { useUser } from "../hooks/useUser";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { updateUserProfile } from "../api/users"; // 作成したAPI関数をインポート
 
 // --- アイコンのインポートと対応表 ---
 import BlueIcon from "../assets/UserIcon_Blue.png";
@@ -41,38 +41,41 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-export const ProfilePage = () => {
+const ProfilePage = () => {
   // --- Contextから取得する変数に別名をつける ---
   const {
     username: globalUsername,
     setUsername: setGlobalUsername,
     iconColor: globalIconColor,
-    setIconColor: setGlobalIconColor
+    setIconColor: setGlobalIconColor,
   } = useUser();
   const navigate = useNavigate();
 
   // --- このページ専用の「下書き用」stateを作成し、Contextの初期値を入れる ---
   const [localUsername, setLocalUsername] = useState(globalUsername ?? ""); // nullish coalescing operatorでnull/undefinedを空文字に変換
   const [localIconColor, setLocalIconColor] = useState(globalIconColor);
-  const [mode, setMode] = useState('てんさく');
+  const [mode, setMode] = useState("てんさく");
 
   // プロフィール情報を保存する処理
   const handleSave = async () => {
-  // --- 保存時に、下書き(ローカルstate)を清書(Context)に反映させる ---
+    // --- 保存時に、下書き(ローカルstate)を清書(Context)に反映させる ---
     setGlobalUsername(localUsername);
     setGlobalIconColor(localIconColor);
 
     try {
       // バックエンドには下書き(ローカルstate)の情報を送信
-      const response = await axios.put('http://localhost:8000/profile', {
+      const profileDate = {
         username: localUsername,
         iconColor: localIconColor,
         mode: mode,
-      });
-      console.log('プロフィール更新成功:', response.data);
-      navigate('/list');
+      };
+
+      const responseDate = await updateUserProfile(profileDate);
+
+      console.log("プロフィール更新成功:", responseDate);
+      navigate("/list");
     } catch (error) {
-      console.error('プロフィールの更新に失敗しました:', error);
+      console.error("プロフィールの更新に失敗しました:", error);
     }
   };
 
@@ -100,11 +103,11 @@ export const ProfilePage = () => {
         {/* 2. メインのアイコンと名前編集エリア */}
         {/* --- UIはすべて下書き(ローカルstate)を参照・更新するように変更 --- */}
         <Flex
-          direction={{ base: 'column', md: 'row' }} // ★スマホでは縦(column)、PC(md以上)では横(row)
+          direction={{ base: "column", md: "row" }} // ★スマホでは縦(column)、PC(md以上)では横(row)
           gap={4} // 要素間のスペース（spacingの代わり）
           w="100%"
           align="center" // 子要素を中央揃えにする
-          padding={{ base: 4, md: "0 100px" }}   // ★スマホでは左右のパディングを減らす
+          padding={{ base: 4, md: "0 100px" }} // ★スマホでは左右のパディングを減らす
         >
           <ProfileIcon
             src={iconMap[localIconColor]?.src || iconMap.blue.src}
@@ -121,7 +124,7 @@ export const ProfilePage = () => {
               fontSize={{ base: "56px", sm: "64px", lg: "72px" }}
               textAlign="center"
               // ★スマホでは横幅を指定、PCでは親要素に合わせる
-              w={{ base: '100%', md: '100%' ,lg: '100%'}} 
+              w={{ base: "100%", md: "100%", lg: "100%" }}
             />
           </Flex>
         </Flex>
@@ -140,11 +143,13 @@ export const ProfilePage = () => {
                 <Box
                   as="button"
                   onClick={() => setLocalIconColor(color)} // 更新先をローカルに変更
-                  borderWidth={localIconColor === color ? '3px' : '1px'} // 参照先をローカルに変更
-                  borderColor={localIconColor === color ? '#ffb433' : 'gray.200'} // 参照先をローカルに変更
+                  borderWidth={localIconColor === color ? "3px" : "1px"} // 参照先をローカルに変更
+                  borderColor={
+                    localIconColor === color ? "#ffb433" : "gray.200"
+                  } // 参照先をローカルに変更
                   borderRadius="full"
                   p="2px"
-                  _focus={{ outline: 'none', boxShadow: 'none' }}
+                  _focus={{ outline: "none", boxShadow: "none" }}
                 >
                   <ProfileIcon
                     src={iconMap[color].src}
@@ -183,3 +188,5 @@ export const ProfilePage = () => {
     </Box>
   );
 };
+
+export default ProfilePage;

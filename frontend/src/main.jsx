@@ -1,21 +1,20 @@
-import React from "react";
+import React, { lazy, Suspence } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import App from "./App.jsx";
-import { InputPage } from "./pages/InputPage.jsx";
-import { LoginPage } from "./pages/LoginPage.jsx";
-import {ProfilePage} from "./pages/ProfilePage.jsx";
-import { PostPage } from "./pages/PostPage.jsx";
-import { ListPage } from "./pages/ListPage.jsx";
+const InputPage = lazy(() => import("./pages/InputPage.jsx"));
+const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage.jsx"));
+const PostPage = lazy(() => import("./pages/PostPage.jsx"));
+const ListPage = lazy(() => import("./pages/ListPage.jsx"));
+const Layout = lazy(() => import("./components/Layout.jsx"));
+const Post = lazy(() => import("./components/Post.jsx"));
 import "./index.css";
 
 // 1. ChakraProvider をインポートします
 import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme/theme.js";
-import { Post } from "./components/Post.jsx";
 import { UserProvider } from "./components/UserProvider.jsx";
-import { Layout } from "./components/Layout.jsx";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +22,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <LoginPage />,
   },
+
   {
     path: "input", // /input
     element: <InputPage />,

@@ -1,10 +1,22 @@
-import { Box, Flex, HStack } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import React, { useState } from "react";
 import { FaImage, FaCamera } from "react-icons/fa";
 import { ProfileIcon } from "../components/ProfileIcon";
 import { PostInput } from "../components/PostInput";
 import { TextButton } from "../components/TextButton";
 import { MarkButton } from "../components/MarkButton";
+import { WhiteTextButton } from "../components/WhiteTextButton";
+import { useUser } from "../hooks/useUser";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+// --- 変更点1: Firebase AuthとAPIのURLを追加 ---
+import { auth } from "../firebase"; // ログインユーザー情報を取得するためにインポート
+
+// .envファイルで管理するのがベストですが、ここでは直接記述します
+const API_URL = "http://localhost:8000";
+
+// --- アイコンのインポートと対応表 (変更なし) ---
 import BlueIcon from "../assets/UserIcon_Blue.png";
 import CreamIcon from "../assets/UserIcon_Cream.png";
 import GreenIcon from "../assets/UserIcon_Green.png";
@@ -13,11 +25,7 @@ import NavyIcon from "../assets/UserIcon_Navy.png";
 import OliveIcon from "../assets/UserIcon_Olive.png";
 import PurpleIcon from "../assets/UserIcon_Purple.png";
 import RedIcon from "../assets/UserIcon_Red.png";
-import YellowIcon from "../assets/UserIcon_Yellow.png"; // 画像のパスは適宜変更してください
-import { useUser } from "../hooks/useUser";
-import { useNavigate } from "react-router-dom";
-import axios from "axios"; // 1. axiosをインポート
-import { WhiteTextButton } from "../components/WhiteTextButton";
+import YellowIcon from "../assets/UserIcon_Yellow.png";
 
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
@@ -31,34 +39,34 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-export const InputPage = () => {
+const InputPage = () => {
   const [text, setText] = useState("");
   const navigate = useNavigate();
-
-  // 4. useUserフックを使って、Contextから現在のiconColorを取得
   const { iconColor } = useUser();
-  // 5. iconColorに基づいて、表示するアイコンのsrcとaltを決定
-  const { src, alt } = iconMap[iconColor] || iconMap.blue; // デフォルトは青
+  const { src, alt } = iconMap[iconColor] || iconMap.blue;
 
-  // 2. handleSubmitを非同期関数(async)に変更
+  // --- 変更点2: handleSubmitの中身をFastAPIへの通信処理に修正 ---
   const handleSubmit = async () => {
-    if (!text.trim()) return; // 空の投稿はしない
+    const user = auth.currentUser; // 現在ログインしているユーザーを取得
+    // テキストが空か、ユーザーがログインしていない場合は処理を中断
+    if (!text.trim() || !user) {
+      console.warn("テキストが入力されていないか、ログインしていません。");
+      return;
+    }
 
     try {
-      // 3. バックエンドのAPIに投稿内容を送信
-      //    URLはあなたのバックエンドAPIのエンドポイントに置き換えてください
-      const response = await axios.post("http://localhost:8000/posts", {
-        text: text,
-        // userId: 'some_user_id' // 実際はログインしているユーザーIDなども送る
+      // FastAPIの /post エンドポイントにデータを送信
+      const response = await axios.post(`${API_URL}/post`, {
+        userId: user.uid, // Firebase Authから取得したユーザーID
+        content: text,    // 入力されたテキスト
       });
 
-      // 4. バックエンドから受け取ったデータ（新しい投稿）をコンソールに表示
-      console.log("投稿成功:", response.data);
+      console.log("✅ 投稿成功:", response.data);
 
-      // 5. 投稿成功後、投稿一覧ページに移動
-      navigate("list");
+      // 投稿成功後、投稿一覧ページに移動
+      navigate("/list");
     } catch (error) {
-      console.error("投稿に失敗しました:", error);
+      console.error("🔥 投稿に失敗しました:", error);
       // ここでユーザーにエラーメッセージを表示する処理などを追加できます
     }
   };
@@ -73,7 +81,6 @@ export const InputPage = () => {
           <WhiteTextButton
             variant="outline"
             borderRadius="full"
-            // 6. 「やめる」ボタンにクリックイベントを追加
             onClick={() => navigate("/list")}
           >
             やめる
@@ -96,7 +103,7 @@ export const InputPage = () => {
               value={text}
               onChange={(e) => {
                 const inputText = e.target.value;
-                // 1. 140文字を超えていたら、それ以上入力させない
+                // 140文字を超えていたら、それ以上入力させない
                 if (inputText.length <= 140) {
                   setText(inputText);
                 }
@@ -124,3 +131,5 @@ export const InputPage = () => {
     </Box>
   );
 };
+
+export default InputPage;

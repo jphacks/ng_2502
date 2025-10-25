@@ -12,9 +12,10 @@ import {
 import { auth } from "../firebaseConfig";
 import { WhiteTextButton } from "../components/WhiteTextButton";
 
-export const LoginPage = () => {
+const LoginPage = () => {
   const { email, setEmail } = useUser();
   const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   // const handleLogin = () => {
@@ -30,6 +31,14 @@ export const LoginPage = () => {
         email,
         password
       );
+
+      // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
+      // ログイン成功後、IDトークンを取得
+      const idToken = await userCredential.user.getIdToken();
+      // localStorageにIDトークンを保存
+      localStorage.setItem("firebaseIdToken", idToken);
+      // --- ▲▲▲ ここまで追加 ▲▲▲ ---
+
       console.log("✅ ログイン成功:", userCredential.user.email);
       navigate("/profile"); // ログイン後ページへ
     } catch (error) {
@@ -39,16 +48,23 @@ export const LoginPage = () => {
 
   // 新規登録
   const handleRegister = async () => {
+    setMessage("");
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
+
+      // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
+      // 新規登録が成功すると自動でログインされるので、IDトークンを取得
+      const idToken = await userCredential.user.getIdToken();
+      // localStorageにIDトークンを保存
+      localStorage.setItem("firebaseIdToken", idToken);
+      // --- ▲▲▲ ここまで追加 ▲▲▲ ---
       console.log("🆕 新規登録成功:", userCredential.user.email);
 
-      // ここでプロフィール初期設定画面へ遷移
-      navigate("/profile-setup");
+      navigate("/profile");
     } catch (error) {
       alert("新規登録に失敗しました: " + error.message);
     }
@@ -90,3 +106,5 @@ export const LoginPage = () => {
     </Box>
   );
 };
+
+export default LoginPage;

@@ -1,85 +1,67 @@
+// --- 変更点1: Firestore関連のインポートを削除し、axiosを追加 ---
 import { useEffect, useState } from "react";
-import { VStack, Text, Spinner, Center } from "@chakra-ui/react";
+import { VStack, Spinner, Center, Text } from "@chakra-ui/react";
 import { Post } from "../components/Post";
-import { useUser } from "../hooks/useUser";
-import { db, auth } from "../firebase";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import axios from "axios"; // API通信にaxiosを使用
 
-export const ListPage = () => {
-  const { email, iconColor } = useUser();
-  const [posts, setPosts] = useState([
-    // 初期デモデータを入れておく（Firestoreが動かなくても見える）
-    {
-      id: "demo1",
-      user: { email: "demo@example.com", iconColor: "gray" },
-      content: "Firestore接続中...（これはデモです）",
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
+// 変更の必要なし: import { auth } from "../firebase"; // 認証状態のチェックだけなら残してもOK
+
+// --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
+// .envファイルで管理するのがベストですが、ここでは直接記述します
+const API_URL = "http://localhost:8000";
+
+const ListPage = () => {
+  // --- 変更点3: postsの初期値を空の配列に、loadingの初期値をtrueに変更 ---
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true); // ページを開いたらすぐに読み込みが始まるため
 
   useEffect(() => {
-    const fetchUserPosts = async () => {
-      setLoading(true);
+    // --- 変更点4: useEffectの中身をaxiosでのAPI呼び出しに全面変更 ---
+    const fetchPosts = async () => {
       try {
-        const user = auth.currentUser;
-        console.log("✅ 現在のユーザー:", user);
+        // FastAPIの /posts エンドポイントにGETリクエストを送信
+        const response = await axios.get(`${API_URL}/posts`);
 
-        if (!user) {
-          console.warn("⚠️ ユーザーがログインしていません。デモデータを表示します。");
-          setLoading(false);
-          return;
-        }
-
-        const postsRef = collection(db, "posts");
-        const q = query(
-          postsRef,
-          where("userId", "==", user.uid),
-          orderBy("timestamp", "desc")
-        );
-
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-          console.warn("📭 投稿が見つかりません。");
-          setPosts([]);
-          return;
-        }
-
-        const userPosts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        console.log("✅ 取得した投稿:", userPosts);
-        setPosts(userPosts);
+        console.log("✅ APIから投稿データを取得しました:", response.data);
+        // サーバーから返ってきた投稿データでstateを更新
+        setPosts(response.data);
       } catch (error) {
-        console.error("🔥 投稿取得中にエラー:", error);
+        console.error("🔥 投稿データの取得中にエラーが発生しました:", error);
+        // エラーが発生した場合、ユーザーに何も表示されないのを避けるためpostsを空にする
+        setPosts([]);
       } finally {
+        // データ取得が成功しても失敗しても、最後に必ずローディング状態をfalseにする
         setLoading(false);
       }
     };
 
-    // Firestoreが落ちてても画面が真っ白にならないよう try/catchで囲む
-    try {
-      fetchUserPosts();
-    } catch (err) {
-      console.error("❌ useEffectでエラー:", err);
-    }
-  }, []);
+    fetchPosts();
+  }, []); // 空の配列[]を指定すると、この処理はページが最初に表示されたときに1回だけ実行される
 
+  // --- ローディング中の表示（変更なし） ---
   if (loading) {
     return (
       <Center h="100vh">
-        <Spinner />
+        <Spinner size="xl" color="orange.400" />
       </Center>
     );
   }
 
   return (
     <VStack spacing={0} align="stretch">
-      {posts.map((post) => (
-        <Post key={post.id} post={post} />
-      ))}
+      {/* --- 変更点5: 投稿が0件の場合の表示を追加 --- */}
+      {posts.length === 0 ? (
+        <Center h="50vh">
+          <Text color="gray.500">まだ投稿がありません。最初の投稿をしてみましょう！</Text>
+        </Center>
+      ) : (
+        posts.map((post) => (
+          // Postコンポーネントに渡すpropsの名前をpostDataに変更（任意ですが推奨）
+          <Post key={post.id} postData={post} />
+        ))
+      )}
     </VStack>
   );
 };
+
+export default ListPage;
