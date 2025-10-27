@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
-from google.cloud import firestore
+# from google.cloud import firestore
 from datetime import datetime, timezone
 import asyncio
 from dotenv import load_dotenv 
@@ -13,6 +13,7 @@ import json
 # --- 変更点1: firebase_admin関連のインポートを追加 ---
 import firebase_admin
 from firebase_admin import credentials as admin_credentials, auth
+from firebase_admin import firestore as admin_firestore
 
 # gemini_utils.pyからAI関数をインポート
 from gemini_utils import (
@@ -72,12 +73,11 @@ else:
 # Firestoreクライアントの初期化 (エミュレータ/本番切り替え)
 if os.getenv("FIRESTORE_EMULATOR_HOST"):
     print("🔥 Firestore Emulator に接続しています")
-    db = firestore.Client(project="myfirstfirebase-440d6") # エミュレータの場合はプロジェクトIDが必要なことがある
+    db = admin_firestore.Client(project="myfirstfirebase-440d6") # エミュレータの場合はプロジェクトIDが必要なことがある
 else:
     print("⚠️ 本番Firestoreに接続しています")
     # 本番環境では credentials は initialize_app で設定済みなので不要
-    db = firestore.Client()
-
+    db = admin_firestore.client()
 
 # --- 変更点2: 認証用の関数を定義 ---
 # HTTPBearer スキーマのインスタンスを作成
@@ -111,7 +111,9 @@ class ProfileUpdate(BaseModel):
 # --- APIエンドポイントの定義 ---
 
 @app.post("/post")
-async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
+#async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
+async def create_post(payload: PostCreate):
+    user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
     # payload.userId の代わりに認証済みの user_id を使う
     # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
     # 1. AIによる安全性チェック
@@ -161,9 +163,9 @@ async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): #
         data = doc.to_dict() or {}
         likes = data.get("likes", [])
         if user_id in likes:
-            post_ref.update({"likes": firestore.ArrayRemove([user_id])})
+            post_ref.update({"likes": admin_firestore.ArrayRemove([user_id])})
         else:
-            post_ref.update({"likes": firestore.ArrayUnion([user_id])})
+            post_ref.update({"likes": admin_firestore.ArrayUnion([user_id])})
         return post_ref.get().to_dict().get("likes", [])
     new_likes = await loop.run_in_executor(None, toggle)
     if new_likes is None:
@@ -185,7 +187,7 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
 async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
     loop = asyncio.get_running_loop()
     def fetch():
-        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
+        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
         # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
         # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
         posts_list = []
