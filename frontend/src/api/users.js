@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // バックエンドサーバーのベースURL
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "http://127.0.0.1:8000"; //本番では変更
 
 /**
  * ユーザーのプロフィール情報を更新する関数

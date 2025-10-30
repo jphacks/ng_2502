@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 firebase_functions~=0.1.0
 firebase-functions
 firebase-admin
-=======
+
 # FastAPI関連
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
@@ -15,4 +14,3 @@ protobuf>=4.25.0  # <-- ★★★ これが重要！新しいバージョンを�
 
 # 環境変数管理
 python-dotenv==1.0.1
->>>>>>> dev

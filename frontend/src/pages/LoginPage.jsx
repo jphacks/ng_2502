@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebaseConfig";
 import { WhiteTextButton } from "../components/WhiteTextButton";
+import axios from "axios";
 
 const LoginPage = () => {
   const { email, setEmail } = useUser();
@@ -48,13 +49,14 @@ const LoginPage = () => {
 
   // 新規登録
   const handleRegister = async () => {
-    setMessage("");
+    //Authにユーザー登録
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
+      const user = userCredential.user;
 
       // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
       // 新規登録が成功すると自動でログインされるので、IDトークンを取得
@@ -62,7 +64,16 @@ const LoginPage = () => {
       // localStorageにIDトークンを保存
       localStorage.setItem("firebaseIdToken", idToken);
       // --- ▲▲▲ ここまで追加 ▲▲▲ ---
-      console.log("🆕 新規登録成功:", userCredential.user.email);
+      console.log("🆕 新規登録成功:", user.email);
+
+      // FastAPI に Firestore 登録リクエスト送信
+      await axios.post("http://localhost:8000/create-user", {
+        //本番デプロイ時はURLをデプロイ先に変更すること
+        uid: user.uid,
+        email: user.email,
+      });
+
+      console.log("✅ Firestore 登録成功");
 
       navigate("/profile");
     } catch (error) {

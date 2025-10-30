@@ -20,8 +20,7 @@ const ListPage = () => {
     const fetchPosts = async () => {
       try {
         // FastAPIの /posts エンドポイントにGETリクエストを送信
-        const response = await axios.get(`${API_URL}/posts`);
-
+        const response = await axios.get(`${API_URL}/posts`); //本番APIのURLに変更
         console.log("✅ APIから投稿データを取得しました:", response.data);
         // サーバーから返ってきた投稿データでstateを更新
         setPosts(response.data);
@@ -52,7 +51,9 @@ const ListPage = () => {
       {/* --- 変更点5: 投稿が0件の場合の表示を追加 --- */}
       {posts.length === 0 ? (
         <Center h="50vh">
-          <Text color="gray.500">まだ投稿がありません。最初の投稿をしてみましょう！</Text>
+          <Text color="gray.500">
+            まだ投稿がありません。最初の投稿をしてみましょう！
+          </Text>
         </Center>
       ) : (
         posts.map((post) => (

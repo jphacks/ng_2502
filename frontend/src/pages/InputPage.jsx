@@ -57,8 +57,9 @@ const InputPage = () => {
     try {
       // FastAPIの /post エンドポイントにデータを送信
       const response = await axios.post(`${API_URL}/post`, {
+        //本番APIのURLに変更
         userId: user.uid, // Firebase Authから取得したユーザーID
-        content: text,    // 入力されたテキスト
+        content: text, // 入力されたテキスト
       });
 
       console.log("✅ 投稿成功:", response.data);
@@ -116,8 +117,11 @@ const InputPage = () => {
               resize="none" // リサイズハンドルを消す
             />
           </Flex>
-          
-          <Flex justify="flex-end" color={text.length > 140 ? "red.500" : "gray.500"}>
+
+          <Flex
+            justify="flex-end"
+            color={text.length > 140 ? "red.500" : "gray.500"}
+          >
             {text.length} / 140
           </Flex>
         </Flex>

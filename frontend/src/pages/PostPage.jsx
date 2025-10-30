@@ -7,6 +7,7 @@ import { useUser } from "../hooks/useUser";
 import { InputComment } from "../components/InputComment";
 import { useDisclosure } from "@chakra-ui/react";
 import { useEffect } from "react";
+import { postComment } from "../api/comments";
 
 const PostPage = () => {
   const location = useLocation();
@@ -26,17 +27,18 @@ const PostPage = () => {
   }, [openComment, onOpen]);
 
   const handleGoBack = () => navigate("/list");
-  const handleCommentSubmit = (newComment) => {
-    const commentPost = {
-      id: `comment-${Date.now()}`,
-      content: newComment,
-      user: {
-        username: username,
-        iconColor: iconColor,
-      },
-    };
-    setComments((prevComments) => [...prevComments, commentPost]);
-    onClose(); // コメント送信後はInputCommentを閉じる
+  const handleCommentSubmit = async (newComment) => {
+    try {
+      const result = await postComment(post.id, {
+        content: newComment,
+        username,
+        iconColor,
+      });
+      setComments((prevComments) => [...prevComments, result]);
+      onClose();
+    } catch (e) {
+      alert("コメント送信に失敗しました");
+    }
   };
 
   return (

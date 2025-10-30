@@ -1,37 +1,4 @@
-<<<<<<< HEAD
-from firebase_functions import auth_fn
-from firebase_admin import initialize_app, firestore
-
-# アプリを初期化
-initialize_app()
-
-# この @auth_fn.on_user_created が「ユーザーが作成されたら」という合図
-@auth_fn.on_user_created
-def create_user_profile(user: auth_fn.UserRecord) -> None:
-    """
-    新しいユーザーが作成された際に、Firestoreにそのユーザー用の
-    プロフィールデータを作成する。
-    """
-    try:
-        print(f"✅ 関数がトリガーされました: UID={user.uid}, Email={user.email}")
-        
-        db = firestore.client()
-        user_ref = db.collection("users").document(user.uid)
-        
-        user_ref.set({
-            "email": user.email,
-            "createdAt": firestore.SERVER_TIMESTAMP,
-            "username": "（未設定）",
-            "iconColor": "blue", # アイコンの色の初期値
-            "mode": "じゆう"     # モードの初期値
-        })
-        
-        print(f"✅ Firestoreにプロフィールを作成しました: {user.uid}")
-
-    except Exception as e:
-        print(f"❌ エラーが発生しました: {e}")
-=======
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -56,7 +23,7 @@ load_dotenv()
 # フロントエンドのURLを許可リストに追加
 origins = [
     "http://localhost:5173", # Viteのデフォルトポート
-    "http://localhost:3000", # Create React Appのデフォルトポート
+    "http://localhost:3000", # 本番ではフロントのURL
 ]
 
 app.add_middleware(
@@ -176,4 +143,26 @@ async def get_posts():
         return [{"id": d.id, **d.to_dict()} for d in docs]
     results = await loop.run_in_executor(None, fetch)
     return results
->>>>>>> dev
+
+class ReplyCreate(BaseModel):
+    content: str
+    user: str
+    iconColor: str
+
+@app.post("/replies/{post_id}")
+async def create_reply(post_id: str, payload: ReplyCreate):
+    loop = asyncio.get_running_loop()
+    def write_reply():
+        replies_ref = db.collection("posts")
+        new_reply = {
+            "content": payload.content,
+            "user": payload.user,
+            "iconColor": payload.iconColor,
+            "replyTo": post_id,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        doc_ref = replies_ref.document()
+        doc_ref.set(new_reply)
+        return {"id": doc_ref.id, **new_reply}
+    result = await loop.run_in_executor(None, write_reply)
+    return result
