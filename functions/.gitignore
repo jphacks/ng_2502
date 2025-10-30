@@ -28,6 +28,7 @@ __pycache__/
 
 # Environment variables
 .env
+serviceAccountKey.json
 
 # IDE settings folder
 .idea/

@@ -1,12 +1,8 @@
-# FastAPI関連
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 
-# Google Cloud & AI 関連
 google-cloud-firestore==2.16.0
 google-generativeai==0.5.4
 firebase-admin==6.5.0
-protobuf>=4.25.0  # <-- ★★★ これが重要！新しいバージョンを指定 ★★★
-
-# 環境変数管理
+protobuf>=4.25.0
 python-dotenv==1.0.1
