@@ -30,7 +30,7 @@ load_dotenv()
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://myfirstfirebase-440d6.web.app/"
+    "https://myfirstfirebase-440d6.web.app"
 ]
 app.add_middleware(
     CORSMiddleware,
