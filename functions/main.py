@@ -1,12 +1,19 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
-from google.cloud import firestore
+# from google.cloud import firestore
 from datetime import datetime, timezone
 import asyncio
 from dotenv import load_dotenv 
 import os
+import json
+
+# --- 変更点1: firebase_admin関連のインポートを追加 ---
+import firebase_admin
+from firebase_admin import credentials as admin_credentials, auth
+from firebase_admin import firestore as admin_firestore
 
 # gemini_utils.pyからAI関数をインポート
 from gemini_utils import (
@@ -19,13 +26,11 @@ from gemini_utils import (
 app = FastAPI()
 load_dotenv()
 
-# --- CORSミドルウェアの設定 ---
-# フロントエンドのURLを許可リストに追加
+# --- CORSミドルウェアの設定 (変更なし) ---
 origins = [
-    "http://localhost:5173", # Viteのデフォルトポート
-    "http://localhost:3000", # Create React Appのデフォルトポート
+    "http://localhost:5173",
+    "http://localhost:3000",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -34,26 +39,84 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Firestoreクライアントの初期化 ---
-# エミュレータ判定
+# --- Firebase Admin SDKの初期化とFirestoreクライアント ---
+cred = None
+try:
+    # ローカル開発用にサービスアカウントキーファイルを試す
+    cred = admin_credentials.Certificate("serviceAccountKey.json")
+except FileNotFoundError:
+    # 本番環境用に環境変数から読み込む (Renderなどで設定)
+    cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if cred_json_str:
+        cred_info = json.loads(cred_json_str)
+        cred = admin_credentials.Certificate(cred_info)
+    else:
+        print("⚠️ サービスアカウントキーが見つかりません。エミュレータモードでのみ動作します。")
+
+# credが見つかった場合のみFirebase Adminを初期化
+if cred:
+    try:
+        firebase_admin.initialize_app(cred)
+    except ValueError as e:
+        # すでに初期化されている場合は無視
+        if "already exists" not in str(e):
+            raise e
+else:
+     # エミュレータ使用時など、credがない場合でも初期化を試みる（一部機能は制限される）
+     try:
+        firebase_admin.initialize_app()
+     except ValueError as e:
+        if "already exists" not in str(e):
+            raise e
+
+
+# Firestoreクライアントの初期化 (エミュレータ/本番切り替え)
 if os.getenv("FIRESTORE_EMULATOR_HOST"):
-    print("🔥 Firestore Emulator に接続しています:", os.getenv("FIRESTORE_EMULATOR_HOST"))
-    db = firestore.Client(project="myfirstfirebase-440d6")
+    print("🔥 Firestore Emulator に接続しています")
+    db = admin_firestore.Client(project="myfirstfirebase-440d6") # エミュレータの場合はプロジェクトIDが必要なことがある
 else:
     print("⚠️ 本番Firestoreに接続しています")
-    db = firestore.Client()
+    # 本番環境では credentials は initialize_app で設定済みなので不要
+    db = admin_firestore.client()
+
+# --- 変更点2: 認証用の関数を定義 ---
+# HTTPBearer スキーマのインスタンスを作成
+bearer_scheme = HTTPBearer()
+
+async def get_current_user(cred: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
+    """ヘッダーからトークンを取得し、検証してユーザーIDを返す"""
+    if cred is None:
+        raise HTTPException(status_code=401, detail="Bearer token missing")
+    try:
+        decoded_token = auth.verify_id_token(cred.credentials)
+        return decoded_token['uid']
+    except Exception as e:
+        print(f"Token verification failed: {e}") # デバッグ用にエラーを出力
+        raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {e}")
+
 
 # --- Pydanticモデルの定義 ---
 class PostCreate(BaseModel):
-    userId: str
+    userId: str # フロントからは送るが、バックエンドでは認証情報から取得する方が安全
     content: str
     imageUrl: Optional[str] = None
     replyTo: Optional[str] = None
 
+# --- 変更点3: Profile更新用のモデルを追加 ---
+class ProfileUpdate(BaseModel):
+    username: str
+    iconColor: str
+    mode: str
+
 # --- APIエンドポイントの定義 ---
 
 @app.post("/post")
+#async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
 async def create_post(payload: PostCreate):
+    user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
+    # payload.userId の代わりに認証済みの user_id を使う
+    # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
+    # 1. AIによる安全性チェック
     is_safe, reason = await validate_post_safety(payload.content)
     if not is_safe:
         raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
@@ -69,7 +132,7 @@ async def create_post(payload: PostCreate):
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
-        "userId": payload.userId,
+        "userId": user_id, # ★認証済みのIDを使用
         "content": payload.content,
         "imageUrl": payload.imageUrl,
         "replyTo": payload.replyTo,
@@ -79,77 +142,97 @@ async def create_post(payload: PostCreate):
         "predictedReplyCount": reply_count,
         "aiComments": generated_comments,
     }
-
-    # 5. Firestoreに書き込み
+    # ... (Firestore書き込み処理) ...
     loop = asyncio.get_running_loop()
     def write_to_firestore():
         doc_ref = db.collection("posts").document()
         doc_ref.set(new_post_data)
         return doc_ref.id
-    
     post_id = await loop.run_in_executor(None, write_to_firestore)
     return {"message": "投稿完了", "postId": post_id}
 
+
 @app.post("/like/{post_id}")
-async def toggle_like(post_id: str, body: dict):
-    user_id = body.get("userId")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User ID is required")
-
+async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
+    # body.get("userId") の代わりに認証済みの user_id を使う
     loop = asyncio.get_running_loop()
-
     def toggle():
         post_ref = db.collection("posts").document(post_id)
         doc = post_ref.get()
-        if not doc.exists:
-            return None
+        if not doc.exists: return None
         data = doc.to_dict() or {}
         likes = data.get("likes", [])
-        # race condition を避けるため ArrayUnion/ArrayRemove を使う
-        
         if user_id in likes:
-            post_ref.update({"likes": firestore.ArrayRemove([user_id])})
+            post_ref.update({"likes": admin_firestore.ArrayRemove([user_id])})
         else:
-            post_ref.update({"likes": firestore.ArrayUnion([user_id])})
-        # 再読み込みして返す
-        
+            post_ref.update({"likes": admin_firestore.ArrayUnion([user_id])})
         return post_ref.get().to_dict().get("likes", [])
-
     new_likes = await loop.run_in_executor(None, toggle)
     if new_likes is None:
         raise HTTPException(status_code=404, detail="投稿が見つかりません")
     return {"message": "いいね更新", "likes": new_likes}
 
+
 @app.get("/replies/{post_id}")
-async def get_replies(post_id: str):
+async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
     loop = asyncio.get_running_loop()
     def fetch():
-        docs = db.collection("posts") \
-                 .where("replyTo", "==", post_id) \
-                 .order_by("timestamp") \
-                 .stream()
+        docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
         return [{"id": d.id, **d.to_dict()} for d in docs]
     results = await loop.run_in_executor(None, fetch)
     return results
+
 
 @app.get("/posts")
-async def get_posts():
+async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
     loop = asyncio.get_running_loop()
     def fetch():
-        docs = db.collection("posts") \
-                 .where("replyTo", "==", None) \
-                 .order_by("timestamp", direction=firestore.Query.DESCENDING) \
-                 .stream()
-        return [{"id": d.id, **d.to_dict()} for d in docs]
+        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
+        # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
+        # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
+        posts_list = []
+        for doc in docs:
+            post_data = doc.to_dict()
+            post_data["id"] = doc.id
+            # 必要であれば、post_data["userId"] を使って別途 users コレクションから情報を取得する
+            posts_list.append(post_data)
+        return posts_list
     results = await loop.run_in_executor(None, fetch)
     return results
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Renderが渡すPORTを使う
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+# --- 変更点4: プロフィール取得APIを追加 ---
+@app.get("/profile")
+async def get_profile(user_id: str = Depends(get_current_user)):
+    """ログインユーザーのプロフィールを取得"""
+    loop = asyncio.get_running_loop()
+    def fetch_user_profile():
+        user_ref = db.collection("users").document(user_id)
+        doc = user_ref.get()
+        if doc.exists:
+            return doc.to_dict()
+        else:
+            # プロフィールがまだ作成されていない場合、デフォルト値を返すかエラーにする
+            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさく"} # 例
+    profile_data = await loop.run_in_executor(None, fetch_user_profile)
+    if profile_data is None:
+         raise HTTPException(status_code=404, detail="User profile not found")
+    return profile_data
 
 
-    #いったんさっき教えてくれたのでよさそうだからログインのことは放置させてもらうんだけど、
-    #今エラー出てるの直すためにmain.pyにポート番号？上のコードをせっていしてpushしなきゃいけない
+# --- 変更点5: プロフィール更新APIを追加 ---
+@app.put("/profile")
+async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
+    """ログインユーザーのプロフィールを更新"""
+    loop = asyncio.get_running_loop()
+    profile_data = payload.dict()
+
+    def write_user_profile():
+        user_ref = db.collection("users").document(user_id)
+        # set(..., merge=True) を使うと、指定したフィールドだけ更新できる
+        user_ref.set(profile_data, merge=True)
+        return user_ref.get().to_dict() # 更新後のデータを返す
+
+    updated_profile = await loop.run_in_executor(None, write_user_profile)
+    return {"message": "プロフィール更新成功", "profile": updated_profile}
+
