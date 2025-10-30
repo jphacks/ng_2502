@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "../firebaseConfig";
+import { auth } from "../firebase";
 import { WhiteTextButton } from "../components/WhiteTextButton";
 
 const LoginPage = () => {

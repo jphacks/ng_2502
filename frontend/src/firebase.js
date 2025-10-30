@@ -23,12 +23,12 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 
 // --- ローカル実行時のみエミュレーターに接続 ---
-if (location.hostname === "localhost") {
-  console.log("🔥 Firebase Emulator に接続中...");
-  connectFirestoreEmulator(db, "localhost", 8080);
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectStorageEmulator(storage, "localhost", 9199);
-}
+// if (location.hostname === "localhost") {
+//   console.log("🔥 Firebase Emulator に接続中...");
+//   connectFirestoreEmulator(db, "localhost", 8080);
+//   connectAuthEmulator(auth, "http://localhost:9099");
+//   connectStorageEmulator(storage, "localhost", 9199);
+// }
 
 // --- 他のファイルから使えるようにエクスポート ---
 export { app, db, auth, storage };
