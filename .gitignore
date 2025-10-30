@@ -64,6 +64,13 @@ node_modules/
 
 # dotenv environment variables file
 .env
-
+.venv
 # dataconnect generated files
 .dataconnect
+
+# Pythonのキャッシュファイルを除外
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.dat

@@ -143,3 +143,13 @@ async def get_posts():
         return [{"id": d.id, **d.to_dict()} for d in docs]
     results = await loop.run_in_executor(None, fetch)
     return results
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))  # Renderが渡すPORTを使う
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+
+
+    #いったんさっき教えてくれたのでよさそうだからログインのことは放置させてもらうんだけど、
+    #今エラー出てるの直すためにmain.pyにポート番号？上のコードをせっていしてpushしなきゃいけない
