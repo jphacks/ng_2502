@@ -30,6 +30,7 @@ load_dotenv()
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://myfirstfirebase-440d6.web.app/"
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -56,6 +57,7 @@ except FileNotFoundError:
 # credが見つかった場合のみFirebase Adminを初期化
 if cred:
     try:
+
         firebase_admin.initialize_app(cred)
     except ValueError as e:
         # すでに初期化されている場合は無視
