@@ -31,7 +31,7 @@ const iconMap = {
 };
 
 // FastAPIサーバーのURL
-const API_URL = "http://localhost:8000";
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 const ProfilePage = () => {
   // --- Contextからグローバルな状態と更新関数を取得 ---
@@ -60,7 +60,12 @@ const ProfilePage = () => {
       setIsLoading(true);
       const user = auth.currentUser;
       if (!user) {
-        toast({ title: "ログインが必要です", status: "error", duration: 3000, isClosable: true });
+        toast({
+          title: "ログインが必要です",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
         navigate("/login"); // ログインページにリダイレクト
         return;
       }
@@ -79,10 +84,14 @@ const ProfilePage = () => {
         setLocalUsername(response.data.username || globalUsername || "");
         setLocalIconColor(response.data.iconColor || globalIconColor || "blue");
         setMode(response.data.mode || "てんさく");
-
       } catch (error) {
         console.error("🔥 プロフィールの取得に失敗:", error);
-        toast({ title: "プロフィールの取得に失敗しました", status: "error", duration: 3000, isClosable: true });
+        toast({
+          title: "プロフィールの取得に失敗しました",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
         // エラーが起きても、Contextの値を初期値として表示は継続する
       } finally {
         setIsLoading(false); // ローディング完了
@@ -98,9 +107,14 @@ const ProfilePage = () => {
     setIsSaving(true); // 保存処理開始
     const user = auth.currentUser;
     if (!user) {
-       toast({ title: "ログインが必要です", status: "error", duration: 3000, isClosable: true });
-       setIsSaving(false);
-       return;
+      toast({
+        title: "ログインが必要です",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      setIsSaving(false);
+      return;
     }
 
     // 保存するデータ
@@ -125,12 +139,22 @@ const ProfilePage = () => {
       setGlobalUsername(localUsername);
       setGlobalIconColor(localIconColor);
 
-      toast({ title: "プロフィールを保存しました", status: "success", duration: 2000, isClosable: true });
+      toast({
+        title: "プロフィールを保存しました",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
       navigate("/list"); // 保存後、一覧ページに戻る
-
     } catch (error) {
       console.error("🔥 プロフィールの更新に失敗しました:", error);
-      toast({ title: "プロフィールの保存に失敗しました", description: error.response?.data?.detail || error.message , status: "error", duration: 5000, isClosable: true });
+      toast({
+        title: "プロフィールの保存に失敗しました",
+        description: error.response?.data?.detail || error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsSaving(false); // 保存処理完了
     }
@@ -185,7 +209,7 @@ const ProfilePage = () => {
             boxShadow="md"
           />
           <Flex w="100%" justify="center">
-             {/* 名前編集はEditableの方がUXが良いかもしれません */}
+            {/* 名前編集はEditableの方がUXが良いかもしれません */}
             <InputText
               placeholder="なまえ"
               value={localUsername}
@@ -201,7 +225,10 @@ const ProfilePage = () => {
 
         {/* 3. アイコン選択エリア (変更なし、ボタン無効化を追加) */}
         <VStack>
-          <Text color="#FFB433" fontSize={{ base: "18px", sm: "20px", lg: "22px" }}>
+          <Text
+            color="#FFB433"
+            fontSize={{ base: "18px", sm: "20px", lg: "22px" }}
+          >
             アイコンをえらんでね
           </Text>
           <Wrap spacing={4} justify="center">
@@ -211,13 +238,18 @@ const ProfilePage = () => {
                   as="button"
                   onClick={() => setLocalIconColor(color)}
                   borderWidth={localIconColor === color ? "3px" : "1px"}
-                  borderColor={localIconColor === color ? "#ffb433" : "gray.200"}
+                  borderColor={
+                    localIconColor === color ? "#ffb433" : "gray.200"
+                  }
                   borderRadius="full"
                   p="2px"
                   _focus={{ outline: "none", boxShadow: "none" }}
                   isDisabled={isSaving} // 保存中は無効化
                 >
-                  <ProfileIcon src={iconMap[color].src} size={{ base: "md", sm: "lg", lg: "xl" }} />
+                  <ProfileIcon
+                    src={iconMap[color].src}
+                    size={{ base: "md", sm: "lg", lg: "xl" }}
+                  />
                 </Box>
               </WrapItem>
             ))}
@@ -226,7 +258,10 @@ const ProfilePage = () => {
 
         {/* 4. モード選択エリア (変更なし、ボタン無効化を追加) */}
         <VStack>
-          <Text color="#FFB433" fontSize={{ base: "18px", sm: "20px", lg: "22px" }}>
+          <Text
+            color="#FFB433"
+            fontSize={{ base: "18px", sm: "20px", lg: "22px" }}
+          >
             モードをえらんでね
           </Text>
           <HStack>

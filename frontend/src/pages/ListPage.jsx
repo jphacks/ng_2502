@@ -8,7 +8,7 @@ import axios from "axios"; // API通信にaxiosを使用
 
 // --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
 // .envファイルで管理するのがベストですが、ここでは直接記述します
-const API_URL = "http://localhost:8000";
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 const ListPage = () => {
   // --- 変更点3: postsの初期値を空の配列に、loadingの初期値をtrueに変更 ---
@@ -52,7 +52,9 @@ const ListPage = () => {
       {/* --- 変更点5: 投稿が0件の場合の表示を追加 --- */}
       {posts.length === 0 ? (
         <Center h="50vh">
-          <Text color="gray.500">まだ投稿がありません。最初の投稿をしてみましょう！</Text>
+          <Text color="gray.500">
+            まだ投稿がありません。最初の投稿をしてみましょう！
+          </Text>
         </Center>
       ) : (
         posts.map((post) => (
