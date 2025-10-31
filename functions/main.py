@@ -114,8 +114,8 @@ class ProfileUpdate(BaseModel):
 
 @app.post("/post")
 #async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
-async def create_post(payload: PostCreate):
-    user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
+async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)):
+    #user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
     # payload.userId の代わりに認証済みの user_id を使う
     # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
     # 1. AIによる安全性チェック
