@@ -55,12 +55,20 @@ const InputPage = () => {
     }
 
     try {
-      // FastAPIの /post エンドポイントにデータを送信
-      const response = await axios.post(`${API_URL}/post`, {
-        //本番APIのURLに変更
-        userId: user.uid, // Firebase Authから取得したユーザーID
-        content: text, // 入力されたテキスト
-      });
+      const token = await user.getIdToken(); // ← ✅ tryの中に書く！
+      const response = await axios.post(
+        `${API_URL}/post`,
+        {
+          content: text,
+          imageUrl: null,
+          replyTo: null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log("✅ 投稿成功:", response.data);
 
