@@ -104,7 +104,7 @@ async def get_current_user(cred: HTTPAuthorizationCredentials = Depends(bearer_s
 
 # --- Pydanticモデルの定義 ---
 class PostCreate(BaseModel):
-    userId: str # フロントからは送るが、バックエンドでは認証情報から取得する方が安全
+    #userId: str # フロントからは送るが、バックエンドでは認証情報から取得する方が安全
     content: str
     imageUrl: Optional[str] = None
     replyTo: Optional[str] = None
