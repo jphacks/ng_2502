@@ -16,7 +16,11 @@ import { useUser } from "../hooks/useUser";
 import { InputComment } from "../components/InputComment";
 import { useDisclosure } from "@chakra-ui/react";
 import { useEffect } from "react";
-import { postComment } from "../api/comments";
+import axios from "axios"; // axiosをインポート
+import { auth } from "../firebase"; // ログインユーザー情報を取得
+
+// FastAPIサーバーのURL
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 const PostPage = () => {
   const location = useLocation();

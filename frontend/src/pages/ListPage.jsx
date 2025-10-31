@@ -8,7 +8,7 @@ import axios from "axios"; // API通信にaxiosを使用
 
 // --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
 // .envファイルで管理するのがベストですが、ここでは直接記述します
-const API_URL = "http://localhost:8000";
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 const ListPage = () => {
   // --- 変更点3: postsの初期値を空の配列に、loadingの初期値をtrueに変更 ---

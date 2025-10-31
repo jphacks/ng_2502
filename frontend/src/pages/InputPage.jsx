@@ -14,7 +14,7 @@ import axios from "axios";
 import { auth } from "../firebase"; // ログインユーザー情報を取得するためにインポート
 
 // .envファイルで管理するのがベストですが、ここでは直接記述します
-const API_URL = "http://localhost:8000";
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 // --- アイコンのインポートと対応表 (変更なし) ---
 import BlueIcon from "../assets/UserIcon_Blue.png";

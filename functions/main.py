@@ -28,8 +28,9 @@ load_dotenv()
 
 # --- CORSミドルウェアの設定 (変更なし) ---
 origins = [
-    "http://localhost:5173", # Viteのデフォルトポート
-    "http://localhost:3000", # 本番ではフロントのURL
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://myfirstfirebase-440d6.web.app"
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -56,6 +57,7 @@ except FileNotFoundError:
 # credが見つかった場合のみFirebase Adminを初期化
 if cred:
     try:
+
         firebase_admin.initialize_app(cred)
     except ValueError as e:
         # すでに初期化されている場合は無視
@@ -110,6 +112,7 @@ class ProfileUpdate(BaseModel):
 
 # --- APIエンドポイントの定義 ---
 
+#投稿作成AIコメント追加データベース保存
 @app.post("/post")
 #async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
 async def create_post(payload: PostCreate):
@@ -151,55 +154,7 @@ async def create_post(payload: PostCreate):
     post_id = await loop.run_in_executor(None, write_to_firestore)
     return {"message": "投稿完了", "postId": post_id}
 
-
-@app.post("/like/{post_id}")
-async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
-    # body.get("userId") の代わりに認証済みの user_id を使う
-    loop = asyncio.get_running_loop()
-    def toggle():
-        post_ref = db.collection("posts").document(post_id)
-        doc = post_ref.get()
-        if not doc.exists: return None
-        data = doc.to_dict() or {}
-        likes = data.get("likes", [])
-        if user_id in likes:
-            post_ref.update({"likes": admin_firestore.ArrayRemove([user_id])})
-        else:
-            post_ref.update({"likes": admin_firestore.ArrayUnion([user_id])})
-        return post_ref.get().to_dict().get("likes", [])
-    new_likes = await loop.run_in_executor(None, toggle)
-    if new_likes is None:
-        raise HTTPException(status_code=404, detail="投稿が見つかりません")
-    return {"message": "いいね更新", "likes": new_likes}
-
-
-@app.get("/replies/{post_id}")
-async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
-    loop = asyncio.get_running_loop()
-    def fetch():
-        docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
-        return [{"id": d.id, **d.to_dict()} for d in docs]
-    results = await loop.run_in_executor(None, fetch)
-    return results
-
-
-@app.get("/posts")
-async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
-    loop = asyncio.get_running_loop()
-    def fetch():
-        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
-        # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
-        # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
-        posts_list = []
-        for doc in docs:
-            post_data = doc.to_dict()
-            post_data["id"] = doc.id
-            # 必要であれば、post_data["userId"] を使って別途 users コレクションから情報を取得する
-            posts_list.append(post_data)
-        return posts_list
-    results = await loop.run_in_executor(None, fetch)
-    return results
-
+#リプライ保存
 class ReplyCreate(BaseModel):
     content: str
     user: str
@@ -222,6 +177,60 @@ async def create_reply(post_id: str, payload: ReplyCreate):
         return {"id": doc_ref.id, **new_reply}
     result = await loop.run_in_executor(None, write_reply)
     return result
+
+
+#いいねのon/off切り替え
+@app.post("/like/{post_id}")
+async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
+    # body.get("userId") の代わりに認証済みの user_id を使う
+    loop = asyncio.get_running_loop()
+    def toggle():
+        post_ref = db.collection("posts").document(post_id)
+        doc = post_ref.get()
+        if not doc.exists: return None
+        data = doc.to_dict() or {}
+        likes = data.get("likes", [])
+        if user_id in likes:
+            post_ref.update({"likes": admin_firestore.ArrayRemove([user_id])})
+        else:
+            post_ref.update({"likes": admin_firestore.ArrayUnion([user_id])})
+        return post_ref.get().to_dict().get("likes", [])
+    new_likes = await loop.run_in_executor(None, toggle)
+    if new_likes is None:
+        raise HTTPException(status_code=404, detail="投稿が見つかりません")
+    return {"message": "いいね更新", "likes": new_likes}
+
+
+#リプライ取得
+@app.get("/replies/{post_id}")
+async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
+    loop = asyncio.get_running_loop()
+    def fetch():
+        docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
+        return [{"id": d.id, **d.to_dict()} for d in docs]
+    results = await loop.run_in_executor(None, fetch)
+    return results
+
+
+#投稿一覧取得
+@app.get("/posts")
+async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
+    loop = asyncio.get_running_loop()
+    def fetch():
+        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
+        # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
+        # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
+        posts_list = []
+        for doc in docs:
+            post_data = doc.to_dict()
+            post_data["id"] = doc.id
+            # 必要であれば、post_data["userId"] を使って別途 users コレクションから情報を取得する
+            posts_list.append(post_data)
+        return posts_list
+    results = await loop.run_in_executor(None, fetch)
+    return results
+
+
 
 # --- 変更点4: プロフィール取得APIを追加 ---
 @app.get("/profile")
