@@ -121,6 +121,26 @@ async def create_post(payload: PostCreate):
     # 1. AIによる安全性チェック
     is_safe, reason = await validate_post_safety(payload.content)
     if not is_safe:
+        # NG理由をデータベースに記録してからエラーを返す
+        loop = asyncio.get_running_loop()
+        def write_rejected():
+            doc_ref = db.collection("rejected_posts").document()
+            doc_ref.set({
+                "userId": user_id,
+                "content": payload.content,
+                "imageUrl": payload.imageUrl,
+                "replyTo": payload.replyTo,
+                "timestamp": datetime.now(timezone.utc),
+                "likes": [],
+                "isSafe": False,
+                "safetyReason": reason,
+            })
+            return doc_ref.id
+        try:
+            rejected_id = await loop.run_in_executor(None, write_rejected)
+            # 必要であれば rejected_id をログなどに活用可能
+        finally:
+            pass
         raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
     # 2. 残りのAI分析を並列実行
