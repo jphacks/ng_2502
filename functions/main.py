@@ -88,12 +88,17 @@ bearer_scheme = HTTPBearer()
 async def get_current_user(cred: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
     """ヘッダーからトークンを取得し、検証してユーザーIDを返す"""
     if cred is None:
+        print("❌ Authorization ヘッダーがありません")
         raise HTTPException(status_code=401, detail="Bearer token missing")
+
+    print(f"🔍 受け取ったトークン: {cred.credentials[:30]}...")  # トークンの先頭だけ表示
+
     try:
         decoded_token = auth.verify_id_token(cred.credentials)
+        print(f"✅ トークン検証成功: uid={decoded_token['uid']}")
         return decoded_token['uid']
     except Exception as e:
-        print(f"Token verification failed: {e}") # デバッグ用にエラーを出力
+        print(f"❌ トークン検証失敗: {e}")
         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {e}")
 
 
