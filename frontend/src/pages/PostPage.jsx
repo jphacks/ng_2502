@@ -17,8 +17,6 @@ import { InputComment } from "../components/InputComment";
 import { NgReason } from "../components/NgReason";
 import { useDisclosure } from "@chakra-ui/react";
 import axios from "axios"; // axiosをインポート
-import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { auth } from "../firebase"; // ログインユーザー情報を取得
 
 // FastAPIサーバーのURL
@@ -58,28 +56,8 @@ const PostPage = () => {
         const response = await axios.get(
           `${API_URL}/replies/${mainPostData.id}`
         );
-        const raw = response.data || [];
-        // コメント投稿者のプロフィールを取得して付与
-        const uids = Array.from(new Set(raw.map((c) => c.userId).filter(Boolean)));
-        const profiles = {};
-        await Promise.all(
-          uids.map(async (uid) => {
-            try {
-              const snap = await getDoc(doc(db, "users", uid));
-              if (snap.exists()) profiles[uid] = snap.data();
-            } catch {
-              // ignore fetch error per-profile
-            }
-          })
-        );
-        const enriched = raw.map((c) => ({
-          ...c,
-          user: {
-            username: profiles[c.userId]?.username || "ユーザー名",
-            iconColor: profiles[c.userId]?.iconColor || "blue",
-          },
-        }));
-        setComments(enriched);
+        // バックエンドがユーザー情報を含めて返すので、そのまま使用
+        setComments(response.data || []);
         console.log("✅ コメントを取得:", response.data);
       } catch (error) {
         console.error("🔥 コメントの取得に失敗:", error);
@@ -92,30 +70,11 @@ const PostPage = () => {
     fetchComments();
   }, [mainPostData?.id]); // mainPostData.idが変わった時だけ再実行
 
-  // メイン投稿のユーザープロフィールを付与
+  // メイン投稿は既にユーザー情報を含んでいるのでそのまま使用
   useEffect(() => {
-    const enrichMainPost = async () => {
-      if (!mainPostData) return;
-      const uid = mainPostData.userId;
-      if (!uid) return;
-      try {
-        const snap = await getDoc(doc(db, "users", uid));
-        const profile = snap.exists() ? snap.data() : {};
-        setMainPost({
-          ...mainPostData,
-          user: {
-            username: profile.username || "ユーザー名",
-            iconColor: profile.iconColor || "blue",
-          },
-        });
-      } catch {
-        setMainPost({
-          ...mainPostData,
-          user: { username: "ユーザー名", iconColor: "blue" },
-        });
-      }
-    };
-    enrichMainPost();
+    if (mainPostData) {
+      setMainPost(mainPostData);
+    }
   }, [mainPostData]);
 
   // ページ遷移時にopenCommentがtrueならInputCommentを開く (変更なし)
@@ -199,7 +158,10 @@ const PostPage = () => {
       {/* メイン投稿の表示 (postDataを渡すように修正) */}
       {mainPostData ? (
         <>
-          <Post post={mainPost || mainPostData} onCommentSubmit={handleCommentSubmit} />
+          <Post
+            post={mainPost || mainPostData}
+            onCommentSubmit={handleCommentSubmit}
+          />
           {/* InputComment (変更なし) */}
           <InputComment
             isOpen={isOpen}
@@ -229,7 +191,52 @@ const PostPage = () => {
           </Center>
         ) : (
           <VStack spacing={4} align="stretch">
-            {comments.length === 0 ? (
+            {/* AIコメントの表示 */}
+            {mainPost?.aiComments &&
+              mainPost.aiComments.length > 0 &&
+              mainPost.aiComments.map((aiComment, index) => {
+                // ランダムなアイコンカラーを選択
+                const colors = [
+                  "blue",
+                  "cream",
+                  "green",
+                  "mint",
+                  "navy",
+                  "olive",
+                  "purple",
+                  "red",
+                  "yellow",
+                ];
+                const randomColor =
+                  colors[Math.floor(Math.random() * colors.length)];
+
+                // aiCommentが文字列の場合とオブジェクトの場合に対応
+                const commentText =
+                  typeof aiComment === "string" ? aiComment : aiComment.comment;
+
+                // AIコメント用のPostデータを作成
+                const aiCommentPost = {
+                  id: `ai-${mainPost.id}-${index}`,
+                  content: commentText,
+                  user: {
+                    username: "あい",
+                    iconColor: randomColor,
+                  },
+                  timestamp: mainPost.timestamp,
+                  likes: [],
+                };
+                return (
+                  <Post
+                    key={aiCommentPost.id}
+                    post={aiCommentPost}
+                    isComment={true}
+                  />
+                );
+              })}
+
+            {/* 通常のコメントの表示 */}
+            {comments.length === 0 &&
+            (!mainPost?.aiComments || mainPost.aiComments.length === 0) ? (
               <Text color="gray.500">まだコメントはありません。</Text>
             ) : (
               comments.map((comment) => (

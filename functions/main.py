@@ -217,23 +217,87 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
     loop = asyncio.get_running_loop()
     def fetch():
         docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
-        return [{"id": d.id, **d.to_dict()} for d in docs]
+        replies_list = []
+        for doc in docs:
+            reply_data = doc.to_dict()
+            reply_data["id"] = doc.id
+            
+            # ユーザー情報を取得して投稿データに追加
+            user_id = reply_data.get("userId")
+            if user_id:
+                try:
+                    user_ref = db.collection("users").document(user_id)
+                    user_doc = user_ref.get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        reply_data["user"] = {
+                            "username": user_data.get("username", "ユーザー名"),
+                            "iconColor": user_data.get("iconColor", "blue")
+                        }
+                    else:
+                        reply_data["user"] = {
+                            "username": "ユーザー名",
+                            "iconColor": "blue"
+                        }
+                except Exception as e:
+                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id}): {e}")
+                    reply_data["user"] = {
+                        "username": "ユーザー名",
+                        "iconColor": "blue"
+                    }
+            else:
+                reply_data["user"] = {
+                    "username": "ユーザー名",
+                    "iconColor": "blue"
+                }
+            
+            replies_list.append(reply_data)
+        return replies_list
     results = await loop.run_in_executor(None, fetch)
     return results
 
 
 @app.get("/posts")
-async def get_posts(user_id: str = Depends(get_current_user)): # 投稿一覧取得も認証不要の場合が多い
+async def get_posts(user_id: str = Depends(get_current_user)): # ログインユーザーの投稿のみ取得
     loop = asyncio.get_running_loop()
     def fetch():
         docs = db.collection("posts").where("replyTo", "==", None).where("userId", "==", user_id).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
-        # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
-        # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
+        # ユーザー情報を付与する
         posts_list = []
         for doc in docs:
             post_data = doc.to_dict()
             post_data["id"] = doc.id
-            # 必要であれば、post_data["userId"] を使って別途 users コレクションから情報を取得する
+            
+            # ユーザー情報を取得して投稿データに追加
+            user_id_from_post = post_data.get("userId")
+            if user_id_from_post:
+                try:
+                    user_ref = db.collection("users").document(user_id_from_post)
+                    user_doc = user_ref.get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        post_data["user"] = {
+                            "username": user_data.get("username", "ユーザー名"),
+                            "iconColor": user_data.get("iconColor", "blue")
+                        }
+                    else:
+                        # ユーザー情報が見つからない場合はデフォルト値
+                        post_data["user"] = {
+                            "username": "ユーザー名",
+                            "iconColor": "blue"
+                        }
+                except Exception as e:
+                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id_from_post}): {e}")
+                    post_data["user"] = {
+                        "username": "ユーザー名",
+                        "iconColor": "blue"
+                    }
+            else:
+                post_data["user"] = {
+                    "username": "ユーザー名",
+                    "iconColor": "blue"
+                }
+            
             posts_list.append(post_data)
         return posts_list
     results = await loop.run_in_executor(None, fetch)
