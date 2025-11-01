@@ -223,10 +223,10 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
 
 
 @app.get("/posts")
-async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
+async def get_posts(user_id: str = Depends(get_current_user)): # 投稿一覧取得も認証不要の場合が多い
     loop = asyncio.get_running_loop()
     def fetch():
-        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
+        docs = db.collection("posts").where("replyTo", "==", None).where("userId", "==", user_id).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
         # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
         # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
         posts_list = []
