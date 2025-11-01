@@ -35,11 +35,7 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-const Post = ({
-  post,
-  onCommentSubmit = () => {},
-  isComment = false,
-}) => {
+const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
   const [isLiked, setIsLiked] = useState(false);
   const { isOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
