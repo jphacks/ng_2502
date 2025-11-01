@@ -1,37 +1,41 @@
-// --- 変更点1: Firestore関連のインポートを削除し、axiosを追加 ---
 import { useEffect, useState } from "react";
 import { VStack, Spinner, Center, Text } from "@chakra-ui/react";
 import { Post } from "../components/Post";
-import axios from "axios"; // API通信にaxiosを使用
-import { db } from "../firebase";
+import axios from "axios";
+import { db, auth } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
-// 変更の必要なし: import { auth } from "../firebase"; // 認証状態のチェックだけなら残してもOK
-
-// --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
-// .envファイルで管理するのがベストですが、ここでは直接記述します
 const API_URL = "https://ng-2502testesu.onrender.com";
 
 const ListPage = () => {
-  // --- 変更点3: postsの初期値を空の配列に、loadingの初期値をtrueに変更 ---
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true); // ページを開いたらすぐに読み込みが始まるため
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // --- 変更点4: useEffectの中身をaxiosでのAPI呼び出しに全面変更 ---
-    const fetchPosts = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn("❌ ログインしていません");
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
       try {
-        // FastAPIの /posts エンドポイントにGETリクエストを送信
-        const response = await axios.get(`${API_URL}/posts`);
+        const token = await user.getIdToken();
+        const response = await axios.get(`${API_URL}/posts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         console.log("✅ APIから投稿データを取得しました:", response.data);
-        // サーバーから返ってきた投稿データに、ユーザープロフィールを付与
         const rawPosts = response.data || [];
+
         const uniqueUserIds = Array.from(
           new Set(rawPosts.map((p) => p.userId).filter(Boolean))
         );
 
-        // users コレクションから各ユーザーのプロフィールを取得
         const profiles = {};
         await Promise.all(
           uniqueUserIds.map(async (uid) => {
@@ -41,7 +45,7 @@ const ListPage = () => {
                 profiles[uid] = snap.data();
               }
             } catch {
-              // 無視（デフォルト適用）
+              // 無視してデフォルト適用
             }
           })
         );
@@ -56,19 +60,24 @@ const ListPage = () => {
 
         setPosts(enriched);
       } catch (error) {
-        console.error("🔥 投稿データの取得中にエラーが発生しました:", error);
-        // エラーが発生した場合、ユーザーに何も表示されないのを避けるためpostsを空にする
+        if (axios.isAxiosError(error)) {
+          console.error("🔥 投稿取得エラー:", {
+            status: error.response?.status,
+            detail: error.response?.data,
+            message: error.message,
+          });
+        } else {
+          console.error("🔥 予期せぬエラー:", error);
+        }
         setPosts([]);
       } finally {
-        // データ取得が成功しても失敗しても、最後に必ずローディング状態をfalseにする
         setLoading(false);
       }
-    };
+    });
 
-    fetchPosts();
-  }, []); // 空の配列[]を指定すると、この処理はページが最初に表示されたときに1回だけ実行される
+    return () => unsubscribe();
+  }, []);
 
-  // --- ローディング中の表示（変更なし） ---
   if (loading) {
     return (
       <Center h="100vh">
@@ -79,7 +88,6 @@ const ListPage = () => {
 
   return (
     <VStack spacing={0} align="stretch">
-      {/* --- 変更点5: 投稿が0件の場合の表示を追加 --- */}
       {posts.length === 0 ? (
         <Center h="50vh">
           <Text color="gray.500">
