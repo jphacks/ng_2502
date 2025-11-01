@@ -191,7 +191,52 @@ const PostPage = () => {
           </Center>
         ) : (
           <VStack spacing={4} align="stretch">
-            {comments.length === 0 ? (
+            {/* AIコメントの表示 */}
+            {mainPost?.aiComments &&
+              mainPost.aiComments.length > 0 &&
+              mainPost.aiComments.map((aiComment, index) => {
+                // ランダムなアイコンカラーを選択
+                const colors = [
+                  "blue",
+                  "cream",
+                  "green",
+                  "mint",
+                  "navy",
+                  "olive",
+                  "purple",
+                  "red",
+                  "yellow",
+                ];
+                const randomColor =
+                  colors[Math.floor(Math.random() * colors.length)];
+
+                // aiCommentが文字列の場合とオブジェクトの場合に対応
+                const commentText =
+                  typeof aiComment === "string" ? aiComment : aiComment.comment;
+
+                // AIコメント用のPostデータを作成
+                const aiCommentPost = {
+                  id: `ai-${mainPost.id}-${index}`,
+                  content: commentText,
+                  user: {
+                    username: "あい",
+                    iconColor: randomColor,
+                  },
+                  timestamp: mainPost.timestamp,
+                  likes: [],
+                };
+                return (
+                  <Post
+                    key={aiCommentPost.id}
+                    post={aiCommentPost}
+                    isComment={true}
+                  />
+                );
+              })}
+
+            {/* 通常のコメントの表示 */}
+            {comments.length === 0 &&
+            (!mainPost?.aiComments || mainPost.aiComments.length === 0) ? (
               <Text color="gray.500">まだコメントはありません。</Text>
             ) : (
               comments.map((comment) => (
