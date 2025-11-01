@@ -14,8 +14,11 @@ import { useState, useEffect } from "react"; // useEffectを追加
 import { IoIosArrowBack } from "react-icons/io";
 import { useUser } from "../hooks/useUser";
 import { InputComment } from "../components/InputComment";
+import { NgReason } from "../components/NgReason";
 import { useDisclosure } from "@chakra-ui/react";
 import axios from "axios"; // axiosをインポート
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { auth } from "../firebase"; // ログインユーザー情報を取得
 
 // FastAPIサーバーのURL
@@ -26,6 +29,7 @@ const PostPage = () => {
   const navigate = useNavigate();
   // location.stateから渡されるメインの投稿データ
   const { post: mainPostData, openComment } = location.state || {};
+  const [mainPost, setMainPost] = useState(mainPostData || null);
 
   // --- 変更点1: コメント用のstateとローディングstateを追加 ---
   const [comments, setComments] = useState([]); // DBから取得したコメントを入れる箱
@@ -33,6 +37,13 @@ const PostPage = () => {
 
   const { iconColor, username } = useUser(); // Contextから現在のユーザー情報を取得
   const { isOpen, onOpen, onClose } = useDisclosure(); // コメント入力モーダルの制御
+  // NG理由モーダル
+  const {
+    isOpen: isNgOpen,
+    onOpen: onNgOpen,
+    onClose: onNgClose,
+  } = useDisclosure();
+  const [ngReason, setNgReason] = useState("");
 
   // --- 変更点2: useEffectでコメントを取得する処理を追加 ---
   useEffect(() => {
@@ -47,7 +58,28 @@ const PostPage = () => {
         const response = await axios.get(
           `${API_URL}/replies/${mainPostData.id}`
         );
-        setComments(response.data); // 取得したコメントでstateを更新
+        const raw = response.data || [];
+        // コメント投稿者のプロフィールを取得して付与
+        const uids = Array.from(new Set(raw.map((c) => c.userId).filter(Boolean)));
+        const profiles = {};
+        await Promise.all(
+          uids.map(async (uid) => {
+            try {
+              const snap = await getDoc(doc(db, "users", uid));
+              if (snap.exists()) profiles[uid] = snap.data();
+            } catch {
+              // ignore fetch error per-profile
+            }
+          })
+        );
+        const enriched = raw.map((c) => ({
+          ...c,
+          user: {
+            username: profiles[c.userId]?.username || "ユーザー名",
+            iconColor: profiles[c.userId]?.iconColor || "blue",
+          },
+        }));
+        setComments(enriched);
         console.log("✅ コメントを取得:", response.data);
       } catch (error) {
         console.error("🔥 コメントの取得に失敗:", error);
@@ -59,6 +91,32 @@ const PostPage = () => {
 
     fetchComments();
   }, [mainPostData?.id]); // mainPostData.idが変わった時だけ再実行
+
+  // メイン投稿のユーザープロフィールを付与
+  useEffect(() => {
+    const enrichMainPost = async () => {
+      if (!mainPostData) return;
+      const uid = mainPostData.userId;
+      if (!uid) return;
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        const profile = snap.exists() ? snap.data() : {};
+        setMainPost({
+          ...mainPostData,
+          user: {
+            username: profile.username || "ユーザー名",
+            iconColor: profile.iconColor || "blue",
+          },
+        });
+      } catch {
+        setMainPost({
+          ...mainPostData,
+          user: { username: "ユーザー名", iconColor: "blue" },
+        });
+      }
+    };
+    enrichMainPost();
+  }, [mainPostData]);
 
   // ページ遷移時にopenCommentがtrueならInputCommentを開く (変更なし)
   useEffect(() => {
@@ -85,6 +143,7 @@ const PostPage = () => {
       userId: user.uid,
       content: newCommentText,
       replyTo: mainPostData.id, // どの投稿への返信かを示すID
+      imageUrl: null,
     };
 
     try {
@@ -109,11 +168,15 @@ const PostPage = () => {
       onClose(); // コメント送信後はInputCommentを閉じる
     } catch (error) {
       console.error("🔥 コメントの投稿に失敗しました:", error);
-      alert(
-        `コメントの投稿に失敗しました: ${
-          error.response?.data?.detail || error.message
-        }`
-      );
+      const status = error.response?.status;
+      const detail = error.response?.data?.detail;
+      if (status === 400 && typeof detail === "string") {
+        const extracted = detail.replace(/^不適切な投稿です[:：]\s?/, "");
+        setNgReason(extracted || detail);
+        onNgOpen();
+      } else {
+        alert(`コメントの投稿に失敗しました: ${detail || error.message}`);
+      }
     }
   };
 
@@ -136,13 +199,15 @@ const PostPage = () => {
       {/* メイン投稿の表示 (postDataを渡すように修正) */}
       {mainPostData ? (
         <>
-          <Post postData={mainPostData} onCommentSubmit={handleCommentSubmit} />
+          <Post post={mainPost || mainPostData} onCommentSubmit={handleCommentSubmit} />
           {/* InputComment (変更なし) */}
           <InputComment
             isOpen={isOpen}
             onClose={onClose}
             onCommentSubmit={handleCommentSubmit}
           />
+          {/* NG理由モーダル */}
+          <NgReason isOpen={isNgOpen} onClose={onNgClose} reason={ngReason} />
         </>
       ) : (
         <Center h="20vh">
@@ -169,7 +234,7 @@ const PostPage = () => {
             ) : (
               comments.map((comment) => (
                 // コメントもPostコンポーネントで表示 (postDataを渡すように修正)
-                <Post key={comment.id} postData={comment} isComment={true} />
+                <Post key={comment.id} post={comment} isComment={true} />
               ))
             )}
           </VStack>

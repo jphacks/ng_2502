@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text, useDisclosure } from "@chakra-ui/react";
 import React, { useState } from "react";
 import { FaImage, FaCamera } from "react-icons/fa";
 import { ProfileIcon } from "../components/ProfileIcon";
@@ -12,6 +12,7 @@ import axios from "axios";
 
 // --- 変更点1: Firebase AuthとAPIのURLを追加 ---
 import { auth } from "../firebase"; // ログインユーザー情報を取得するためにインポート
+import { NgReason } from "../components/NgReason";
 
 // .envファイルで管理するのがベストですが、ここでは直接記述します
 const API_URL = "https://ng-2502testesu.onrender.com";
@@ -44,6 +45,13 @@ const InputPage = () => {
   const navigate = useNavigate();
   const { iconColor } = useUser();
   const { src, alt } = iconMap[iconColor] || iconMap.blue;
+  // NG理由モーダル制御
+  const {
+    isOpen: isNgOpen,
+    onOpen: onNgOpen,
+    onClose: onNgClose,
+  } = useDisclosure();
+  const [ngReason, setNgReason] = useState("");
 
   // --- 変更点2: handleSubmitの中身をFastAPIへの通信処理に修正 ---
   const handleSubmit = async () => {
@@ -76,7 +84,18 @@ const InputPage = () => {
       navigate("/list");
     } catch (error) {
       console.error("🔥 投稿に失敗しました:", error);
-      // ここでユーザーにエラーメッセージを表示する処理などを追加できます
+      const status = error.response?.status;
+      const detail = error.response?.data?.detail;
+      if (status === 400 && typeof detail === "string") {
+        // バックエンドは "不適切な投稿です: {reason}" の形式で返す
+        const extracted = detail.replace(/^不適切な投稿です[:：]\s?/, "");
+        setNgReason(extracted || detail);
+        onNgOpen();
+      } else {
+        // その他のエラーは従来の通知
+        const msg = detail || error.message || "投稿に失敗しました";
+        alert(msg);
+      }
     }
   };
 
@@ -140,6 +159,9 @@ const InputPage = () => {
           <MarkButton label="Camera" icon={<FaCamera />} />
         </HStack>
       </Flex>
+
+      {/* NG理由モーダル */}
+      <NgReason isOpen={isNgOpen} onClose={onNgClose} reason={ngReason} />
     </Box>
   );
 };

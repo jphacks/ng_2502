@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { VStack, Spinner, Center, Text } from "@chakra-ui/react";
 import { Post } from "../components/Post";
 import axios from "axios"; // API通信にaxiosを使用
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 // 変更の必要なし: import { auth } from "../firebase"; // 認証状態のチェックだけなら残してもOK
 
@@ -23,8 +25,36 @@ const ListPage = () => {
         const response = await axios.get(`${API_URL}/posts`);
 
         console.log("✅ APIから投稿データを取得しました:", response.data);
-        // サーバーから返ってきた投稿データでstateを更新
-        setPosts(response.data);
+        // サーバーから返ってきた投稿データに、ユーザープロフィールを付与
+        const rawPosts = response.data || [];
+        const uniqueUserIds = Array.from(
+          new Set(rawPosts.map((p) => p.userId).filter(Boolean))
+        );
+
+        // users コレクションから各ユーザーのプロフィールを取得
+        const profiles = {};
+        await Promise.all(
+          uniqueUserIds.map(async (uid) => {
+            try {
+              const snap = await getDoc(doc(db, "users", uid));
+              if (snap.exists()) {
+                profiles[uid] = snap.data();
+              }
+            } catch {
+              // 無視（デフォルト適用）
+            }
+          })
+        );
+
+        const enriched = rawPosts.map((p) => ({
+          ...p,
+          user: {
+            username: profiles[p.userId]?.username || "ユーザー名",
+            iconColor: profiles[p.userId]?.iconColor || "blue",
+          },
+        }));
+
+        setPosts(enriched);
       } catch (error) {
         console.error("🔥 投稿データの取得中にエラーが発生しました:", error);
         // エラーが発生した場合、ユーザーに何も表示されないのを避けるためpostsを空にする
@@ -57,10 +87,7 @@ const ListPage = () => {
           </Text>
         </Center>
       ) : (
-        posts.map((post) => (
-          // Postコンポーネントに渡すpropsの名前をpostDataに変更（任意ですが推奨）
-          <Post key={post.id} postData={post} />
-        ))
+        posts.map((post) => <Post key={post.id} post={post} />)
       )}
     </VStack>
   );
