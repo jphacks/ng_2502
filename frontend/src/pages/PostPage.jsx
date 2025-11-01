@@ -27,7 +27,6 @@ const PostPage = () => {
   const navigate = useNavigate();
   // location.stateから渡されるメインの投稿データ
   const { post: mainPostData, openComment } = location.state || {};
-  const [mainPost, setMainPost] = useState(mainPostData || null);
 
   // --- 変更点1: コメント用のstateとローディングstateを追加 ---
   const [comments, setComments] = useState([]); // DBから取得したコメントを入れる箱
@@ -69,13 +68,6 @@ const PostPage = () => {
 
     fetchComments();
   }, [mainPostData?.id]); // mainPostData.idが変わった時だけ再実行
-
-  // メイン投稿は既にユーザー情報を含んでいるのでそのまま使用
-  useEffect(() => {
-    if (mainPostData) {
-      setMainPost(mainPostData);
-    }
-  }, [mainPostData]);
 
   // ページ遷移時にopenCommentがtrueならInputCommentを開く (変更なし)
   useEffect(() => {
@@ -158,10 +150,7 @@ const PostPage = () => {
       {/* メイン投稿の表示 (postDataを渡すように修正) */}
       {mainPostData ? (
         <>
-          <Post
-            post={mainPost || mainPostData}
-            onCommentSubmit={handleCommentSubmit}
-          />
+          <Post post={mainPostData} onCommentSubmit={handleCommentSubmit} />
           {/* InputComment (変更なし) */}
           <InputComment
             isOpen={isOpen}
@@ -192,9 +181,9 @@ const PostPage = () => {
         ) : (
           <VStack spacing={4} align="stretch">
             {/* AIコメントの表示 */}
-            {mainPost?.aiComments &&
-              mainPost.aiComments.length > 0 &&
-              mainPost.aiComments.map((aiComment, index) => {
+            {mainPostData?.aiComments &&
+              mainPostData.aiComments.length > 0 &&
+              mainPostData.aiComments.map((aiComment, index) => {
                 // ランダムなアイコンカラーを選択
                 const colors = [
                   "blue",
@@ -216,13 +205,13 @@ const PostPage = () => {
 
                 // AIコメント用のPostデータを作成
                 const aiCommentPost = {
-                  id: `ai-${mainPost.id}-${index}`,
+                  id: `ai-${mainPostData.id}-${index}`,
                   content: commentText,
                   user: {
                     username: "あい",
                     iconColor: randomColor,
                   },
-                  timestamp: mainPost.timestamp,
+                  timestamp: mainPostData.timestamp,
                   likes: [],
                 };
                 return (
@@ -236,7 +225,8 @@ const PostPage = () => {
 
             {/* 通常のコメントの表示 */}
             {comments.length === 0 &&
-            (!mainPost?.aiComments || mainPost.aiComments.length === 0) ? (
+            (!mainPostData?.aiComments ||
+              mainPostData.aiComments.length === 0) ? (
               <Text color="gray.500">まだコメントはありません。</Text>
             ) : (
               comments.map((comment) => (
