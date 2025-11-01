@@ -1,4 +1,4 @@
-import React, { lazy, Suspence } from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
@@ -12,7 +12,7 @@ const Post = lazy(() => import("./components/Post.jsx"));
 import "./index.css";
 
 // 1. ChakraProvider をインポートします
-import { ChakraProvider } from "@chakra-ui/react";
+import { ChakraProvider, Spinner, Center } from "@chakra-ui/react";
 import theme from "./theme/theme.js";
 import { UserProvider } from "./components/UserProvider.jsx";
 
@@ -57,7 +57,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     {/* 2. <App /> コンポーネント全体を <ChakraProvider> で囲みます */}
     <ChakraProvider theme={theme}>
       <UserProvider>
-        <RouterProvider router={router} />
+        <Suspense
+          fallback={
+            <Center h="100vh">
+              <Spinner size="xl" color="orange.400" />
+            </Center>
+          }
+        >
+          <RouterProvider router={router} />
+        </Suspense>
       </UserProvider>
     </ChakraProvider>
   </React.StrictMode>
