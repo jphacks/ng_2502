@@ -123,30 +123,42 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     #user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
     # payload.userId の代わりに認証済みの user_id を使う
     # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
-    # 1. AIによる安全性チェック
-    is_safe, reason = await validate_post_safety(payload.content)
-    if not is_safe:
-        # NG理由をデータベースに記録してからエラーを返す
-        loop = asyncio.get_running_loop()
-        def write_rejected():
-            doc_ref = db.collection("rejected_posts").document()
-            doc_ref.set({
-                "userId": user_id,
-                "content": payload.content,
-                "imageUrl": payload.imageUrl,
-                "replyTo": payload.replyTo,
-                "timestamp": datetime.now(timezone.utc),
-                "likes": [],
-                "isSafe": False,
-                "safetyReason": reason,
-            })
-            return doc_ref.id
-        try:
-            rejected_id = await loop.run_in_executor(None, write_rejected)
-            # 必要であれば rejected_id をログなどに活用可能
-        finally:
-            pass
-        raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
+    
+    # ユーザーのモード情報を取得
+    loop = asyncio.get_running_loop()
+    def get_user_mode():
+        user_ref = db.collection("users").document(user_id)
+        doc = user_ref.get()
+        if doc.exists:
+            return doc.to_dict().get("mode", "てんさく")  # デフォルトは「てんさく」
+        return "てんさく"  # ユーザー情報がない場合もデフォルトは「てんさく」
+    
+    user_mode = await loop.run_in_executor(None, get_user_mode)
+    
+    # 1. AIによる安全性チェック（てんさくモードの時のみ）
+    if user_mode == "てんさく":
+        is_safe, reason = await validate_post_safety(payload.content)
+        if not is_safe:
+            # NG理由をデータベースに記録してからエラーを返す
+            def write_rejected():
+                doc_ref = db.collection("rejected_posts").document()
+                doc_ref.set({
+                    "userId": user_id,
+                    "content": payload.content,
+                    "imageUrl": payload.imageUrl,
+                    "replyTo": payload.replyTo,
+                    "timestamp": datetime.now(timezone.utc),
+                    "likes": [],
+                    "isSafe": False,
+                    "safetyReason": reason,
+                })
+                return doc_ref.id
+            try:
+                rejected_id = await loop.run_in_executor(None, write_rejected)
+                # 必要であれば rejected_id をログなどに活用可能
+            finally:
+                pass
+            raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
     # 2. 残りのAI分析を並列実行
     (is_positive, (reply_count, reaction_types)) = await asyncio.gather(
