@@ -64,19 +64,19 @@ const InputPage = () => {
 
     try {
       const token = await user.getIdToken(); // ← ✅ tryの中に書く！
-      const response = await axios.post(`${API_URL}/post`,
-      {
-        content: text,
-        imageUrl: null,
-        replyTo: null,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const response = await axios.post(
+        `${API_URL}/post`,
+        {
+          content: text,
+          imageUrl: null,
+          replyTo: null,
         },
-      }
-    );
-
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log("✅ 投稿成功:", response.data);
 
@@ -154,10 +154,10 @@ const InputPage = () => {
         </Flex>
 
         {/* 3. 下部のアイコンボタン */}
-        <HStack spacing={4}>
+        {/* <HStack spacing={4}>
           <MarkButton label="Image" icon={<FaImage />} />
           <MarkButton label="Camera" icon={<FaCamera />} />
-        </HStack>
+        </HStack> */}
       </Flex>
 
       {/* NG理由モーダル */}
