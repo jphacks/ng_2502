@@ -84,16 +84,15 @@ async def predict_post_reactions(text: str) -> tuple[int, list[str]]:
         return 3, ["positive","neutral","neutral"]
 
 
-async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> list[dict]:
+async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> list[str]:
     """
     軽量モデル向けに、1件ずつコメント生成してリストにまとめる。
-    各コメントに「いいね予測数」を追加。
-    戻り値: [{"content": "コメント文", "predictedLikes": 5}, ...]
+    戻り値: ["コメント文", ...]
     """
     if not gemini_model:
-        return [{"content": "いいね！😊", "predictedLikes": 3} for _ in reactions]
+        return ["いいね！😊" for _ in reactions]
 
-    comments = []
+    comments: list[str] = []
     for r_type in reactions:
         # コメント生成
         comment_prompt = f"""
@@ -114,25 +113,29 @@ async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> li
         except Exception:
             comment_text = "いいね！😄"
 
-        # いいね予測数を生成
-        likes_prompt = f"""
-以下のコメントが「{text}」という投稿に対してつけられた場合、何件の「いいね」がつくと予測されますか?
-コメント: "{comment_text}"
-タイプ: {r_type}
-0〜100の数字だけで答えてください。
-"""
-        try:
-            likes_response = await gemini_model.generate_content_async(likes_prompt)
-            predicted_likes = int(''.join(filter(str.isdigit, likes_response.text.strip())))
-            # 範囲を0-100に制限
-            predicted_likes = max(0, min(100, predicted_likes))
-        except Exception:
-            # デフォルト値: positive=5, neutral=3, negative=0
-            predicted_likes = 5 if r_type == "positive" else 3 if r_type == "neutral" else 0
-
-        comments.append({
-            "content": comment_text,
-            "predictedLikes": predicted_likes
-        })
+        comments.append(comment_text)
     
     return comments
+
+
+async def predict_post_likes(text: str) -> int:
+    """
+    ユーザーの投稿に対して、つくと予測される「いいね」の件数を返す。
+    0〜100の範囲にクリップして整数で返す。
+    失敗時はデフォルト値 3 を返す。
+    """
+    if not gemini_model:
+        return 3
+
+    prompt = f"""
+あなたはSNSの反応予測AIです。
+以下の投稿に、どれくらいの「いいね」がつくと予測しますか？
+0〜100の数字だけで答えてください。
+投稿: "{text}"
+"""
+    try:
+        response = await gemini_model.generate_content_async(prompt)
+        predicted = int(''.join(filter(str.isdigit, response.text.strip())))
+        return max(0, min(100, predicted))
+    except Exception:
+        return 3

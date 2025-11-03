@@ -20,7 +20,8 @@ from gemini_utils import (
     validate_post_safety,
     judge_post_positivity,
     predict_post_reactions,
-    generate_reaction_comments_bulk
+    generate_reaction_comments_bulk,
+    predict_post_likes,
 )
 
 app = FastAPI()
@@ -160,10 +161,11 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 pass
             raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
-    # 2. 残りのAI分析を並列実行
-    (is_positive, (reply_count, reaction_types)) = await asyncio.gather(
+    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測）
+    (is_positive, (reply_count, reaction_types), predicted_likes) = await asyncio.gather(
         judge_post_positivity(payload.content),
-        predict_post_reactions(payload.content)
+        predict_post_reactions(payload.content),
+        predict_post_likes(payload.content),
     )
 
     # 3. AIコメントを生成
@@ -179,6 +181,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "likes": [],
         "isPositive": is_positive,
         "predictedReplyCount": reply_count,
+        "predictedLikes": predicted_likes,
         "aiComments": generated_comments,
     }
     # ... (Firestore書き込み処理) ...
