@@ -84,16 +84,19 @@ async def predict_post_reactions(text: str) -> tuple[int, list[str]]:
         return 3, ["positive","neutral","neutral"]
 
 
-async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> list[str]:
+async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> list[dict]:
     """
     軽量モデル向けに、1件ずつコメント生成してリストにまとめる。
+    各コメントに「いいね予測数」を追加。
+    戻り値: [{"content": "コメント文", "predictedLikes": 5}, ...]
     """
     if not gemini_model:
-        return ["いいね！😊" for _ in reactions]
+        return [{"content": "いいね！😊", "predictedLikes": 3} for _ in reactions]
 
     comments = []
     for r_type in reactions:
-        prompt = f"""
+        # コメント生成
+        comment_prompt = f"""
 あなたは小学生のSNSユーザーです。
 以下の投稿に対して、1件のコメントを生成してください。
 タイプ: {r_type}
@@ -106,8 +109,30 @@ async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> li
 投稿: "{text}"
 """
         try:
-            response = await gemini_model.generate_content_async(prompt)
-            comments.append(response.text.strip())
+            response = await gemini_model.generate_content_async(comment_prompt)
+            comment_text = response.text.strip()
         except Exception:
-            comments.append("いいね！😄")
+            comment_text = "いいね！😄"
+
+        # いいね予測数を生成
+        likes_prompt = f"""
+以下のコメントが「{text}」という投稿に対してつけられた場合、何件の「いいね」がつくと予測されますか?
+コメント: "{comment_text}"
+タイプ: {r_type}
+0〜100の数字だけで答えてください。
+"""
+        try:
+            likes_response = await gemini_model.generate_content_async(likes_prompt)
+            predicted_likes = int(''.join(filter(str.isdigit, likes_response.text.strip())))
+            # 範囲を0-100に制限
+            predicted_likes = max(0, min(100, predicted_likes))
+        except Exception:
+            # デフォルト値: positive=5, neutral=3, negative=0
+            predicted_likes = 5 if r_type == "positive" else 3 if r_type == "neutral" else 0
+
+        comments.append({
+            "content": comment_text,
+            "predictedLikes": predicted_likes
+        })
+    
     return comments
