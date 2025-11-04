@@ -16,6 +16,11 @@ import PurpleIcon from "../assets/UserIcon_Purple.png";
 import RedIcon from "../assets/UserIcon_Red.png";
 import YellowIcon from "../assets/UserIcon_Yellow.png";
 
+// --- ★実績変更点1 ---
+import { useDisclosure, IconButton } from "@chakra-ui/react";
+import { FaTrophy } from "react-icons/fa"; // 実績アイコン
+import { AchievementsModal } from "./AchievementsModal";
+
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
   cream: { src: CreamIcon, alt: "Cream Icon" },
@@ -31,6 +36,10 @@ const iconMap = {
 export const Header = () => {
   const { iconColor } = useUser();
   const { src, alt } = iconMap[iconColor] || iconMap.blue;
+
+  // --- ★実績変更点2 ---
+  // モーダル開閉のためのフック
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <Flex
@@ -49,6 +58,17 @@ export const Header = () => {
           <CircleIcon src={src} alt={alt} />
         </Link>
       </Box>
+
+      {/* --- ★実績変更点3 --- */}
+      <IconButton
+        aria-label="実績一覧"
+        icon={<FaTrophy />}
+        onClick={onOpen} // クリックでモーダルを開く
+        variant="ghost"
+      />
+      {/* ヘッダーのどこかにモーダル本体を配置 (表示はisOpenで制御される) */}
+      <AchievementsModal isOpen={isOpen} onClose={onClose} />
+
       <Box>
         <Link to="/list">
           <ImageButton img={AppIconNoText} alt="SNR Logo" />
