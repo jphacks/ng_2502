@@ -191,6 +191,9 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         doc_ref.set(new_post_data)
         return doc_ref.id
     post_id = await loop.run_in_executor(None, write_to_firestore)
+        # 投稿完了後に投稿数をカウントして実績を更新
+    post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
+    await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
     return {"message": "投稿完了", "postId": post_id}
 
 
@@ -342,3 +345,28 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     updated_profile = await loop.run_in_executor(None, write_user_profile)
     return {"message": "プロフィール更新成功", "profile": updated_profile}
 
+def count_user_posts(user_id: str):
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(1 for _ in docs)
+
+ def update_achievements(user_id: str, post_count: int):
+    achievement_ref = db.collection("achievements").document(user_id)
+    achievements = []
+
+    if post_count >= 1:
+        achievements.append("初投稿")
+    if post_count >= 10:
+        achievements.append("投稿10件達成")
+    if post_count >= 50:
+        achievements.append("投稿職人")
+
+    achievement_ref.set({"unlocked": achievements}, merge=True)
+
+@app.get("/achievements")
+async def get_achievements(user_id: str = Depends(get_current_user)):
+    loop = asyncio.get_running_loop()
+    def fetch():
+        doc = db.collection("achievements").document(user_id).get()
+        return doc.to_dict().get("unlocked", []) if doc.exists else []
+    unlocked = await loop.run_in_executor(None, fetch)
+    return {"achievements": unlocked}
