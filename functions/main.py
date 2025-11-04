@@ -349,7 +349,7 @@ def count_user_posts(user_id: str):
     docs = db.collection("posts").where("userId", "==", user_id).stream()
     return sum(1 for _ in docs)
 
- def update_achievements(user_id: str, post_count: int):
+def update_achievements(user_id: str, post_count: int):
     achievement_ref = db.collection("achievements").document(user_id)
     achievements = []
 
