@@ -375,12 +375,15 @@ def update_achievements(user_id: str, post_count: int):
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
-def check_controversial_achievement():
+def check_controversial_achievement(user_id: str, is_controversial: bool):
+    if not is_controversial:
+        return
+
     ach_ref = db.collection("achievements").document(user_id)
     ach_doc = ach_ref.get()
     unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
 
-    if "炎上経験者" not in unlocked and is_controversial:
+    if "炎上経験者" not in unlocked:
         ach_ref.set({
             "unlocked": unlocked + ["炎上経験者"]
         }, merge=True)
