@@ -351,16 +351,18 @@ def count_user_posts(user_id: str):
 
 def update_achievements(user_id: str, post_count: int):
     achievement_ref = db.collection("achievements").document(user_id)
-    achievements = []
+    doc = achievement_ref.get()
+    existing = doc.to_dict().get("unlocked", []) if doc.exists else []
+    achievements = set(existing)  # 重複を避けるために set にする
 
     if post_count >= 1:
-        achievements.append("初投稿")
+        achievements.add("初投稿")
     if post_count >= 10:
-        achievements.append("投稿10件達成")
+        achievements.add("投稿10件達成")
     if post_count >= 50:
-        achievements.append("投稿職人")
+        achievements.add("投稿職人")
 
-    achievement_ref.set({"unlocked": achievements}, merge=True)
+    achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):
