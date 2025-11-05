@@ -205,6 +205,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
+    await loop.run_in_executor(None, check_controversial_achievement)
     return {"message": "投稿完了", "postId": post_id}
 
 
@@ -367,14 +368,22 @@ def update_achievements(user_id: str, post_count: int):
     existing = doc.to_dict().get("unlocked", []) if doc.exists else []
     achievements = set(existing)  # 重複を避けるために set にする
 
-    if post_count >= 1:
-        achievements.add("初投稿")
     if post_count >= 10:
         achievements.add("投稿10件達成")
     if post_count >= 50:
         achievements.add("投稿職人")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
+
+def check_controversial_achievement():
+    ach_ref = db.collection("achievements").document(user_id)
+    ach_doc = ach_ref.get()
+    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+
+    if "炎上経験者" not in unlocked and is_controversial:
+        ach_ref.set({
+            "unlocked": unlocked + ["炎上経験者"]
+        }, merge=True)
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):
