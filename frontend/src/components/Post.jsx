@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { InputComment } from "./InputComment";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { SlSpeech } from "react-icons/sl";
+import { getAuth } from "firebase/auth";
 
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
@@ -36,7 +37,11 @@ const iconMap = {
 };
 
 const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
-  const [isLiked, setIsLiked] = useState(false);
+  const auth = getAuth();
+  const currentUserId = auth.currentUser?.uid;
+  const isOwnPost = post.userId === currentUserId;
+
+  const [isLiked, setIsLiked] = useState(isOwnPost ? true : false);
   const { isOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
@@ -50,6 +55,7 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
 
   const handleLikeClick = (e) => {
     e.stopPropagation(); // 親要素へのイベント伝播を停止
+    if (isOwnPost) return;
     setIsLiked(!isLiked);
   };
 
@@ -100,7 +106,7 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
               onClick={handleLikeClick}
            />
             {typeof post.predictedLikes === "number" && !isComment && (
-              <Text fontSize="25px" color="#80CBC4" lineHeight="1">
+              <Text fontSize="25px" color="#80CBC4" lineHeight="1" fontFamily="monospace" minW="32px" textAlign="center">
                 {post.predictedLikes}
               </Text>
             )}
