@@ -53,9 +53,9 @@ export const Header = () => {
       w="100%"
       bg="#FFFFFF"
     >
-      <Box flex="1">
+      <Box flex="1" display="flex" alignItems="center" gap={2}>
         <Link to="/profile">
-          <CircleIcon src={src} alt={alt} />
+        <CircleIcon src={src} alt={alt} />
         </Link>
       </Box>
 

@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { InputComment } from "./InputComment";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { SlSpeech } from "react-icons/sl";
+import { getAuth } from "firebase/auth";
 
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
@@ -35,12 +36,12 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-const Post = ({
-  post,
-  onCommentSubmit = () => {},
-  isComment = false,
-}) => {
-  const [isLiked, setIsLiked] = useState(false);
+const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
+  const auth = getAuth();
+  const currentUserId = auth.currentUser?.uid;
+  const isOwnPost = post.userId === currentUserId;
+
+  const [isLiked, setIsLiked] = useState(isOwnPost ? true : false);
   const { isOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
@@ -54,6 +55,7 @@ const Post = ({
 
   const handleLikeClick = (e) => {
     e.stopPropagation(); // 親要素へのイベント伝播を停止
+    if (isOwnPost) return;
     setIsLiked(!isLiked);
   };
 
@@ -90,24 +92,34 @@ const Post = ({
         <Box pl={{ base: "48px", md: "52px" }}>
           <Text fontSize={{ base: "md", md: "lg" }}>{content}</Text>
         </Box>
-        <HStack spacing={4} justify="flex-end">
-          <ReactionButton
-            label="Like"
-            icon={
-              isLiked ? (
-                <FaHeart fontSize={{ base: "16px", md: "20px" }} />
-              ) : (
-                <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
-              )
-            }
-            onClick={handleLikeClick}
-          />
-          {!isComment && (
+        <HStack justify="flex-end">
+          <HStack spacing={1} align="center">
             <ReactionButton
-              label="Comment"
-              icon={<SlSpeech fontSize={{ base: "16px", md: "20px" }} />}
-              onClick={handleCommentClick}
-            />
+              label="Like"
+              icon={
+                isLiked ? (
+                  <FaHeart fontSize={{ base: "16px", md: "20px" }} />
+                ) : (
+                  <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
+                )
+              } 
+              onClick={handleLikeClick}
+           />
+            {typeof post.predictedLikes === "number" && !isComment && (
+              <Text fontSize="25px" color="#80CBC4" lineHeight="1" fontFamily="monospace" minW="32px" textAlign="center">
+                {post.predictedLikes}
+              </Text>
+            )}
+          </HStack>
+
+          {!isComment && (
+            <Box ml={10}>
+              <ReactionButton
+                label="Comment"
+                icon={<SlSpeech fontSize={{ base: "16px", md: "20px" }} />}
+                onClick={handleCommentClick}
+              />
+            </Box>
           )}
         </HStack>
         <Divider borderColor="#80CBC4" />

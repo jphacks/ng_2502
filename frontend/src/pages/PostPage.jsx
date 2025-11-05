@@ -27,7 +27,6 @@ const PostPage = () => {
   const navigate = useNavigate();
   // location.stateから渡されるメインの投稿データ
   const { post: mainPostData, openComment } = location.state || {};
-  const [mainPost, setMainPost] = useState(mainPostData || null);
 
   // --- 変更点1: コメント用のstateとローディングstateを追加 ---
   const [comments, setComments] = useState([]); // DBから取得したコメントを入れる箱
@@ -69,13 +68,6 @@ const PostPage = () => {
 
     fetchComments();
   }, [mainPostData?.id]); // mainPostData.idが変わった時だけ再実行
-
-  // メイン投稿は既にユーザー情報を含んでいるのでそのまま使用
-  useEffect(() => {
-    if (mainPostData) {
-      setMainPost(mainPostData);
-    }
-  }, [mainPostData]);
 
   // ページ遷移時にopenCommentがtrueならInputCommentを開く (変更なし)
   useEffect(() => {
@@ -158,10 +150,7 @@ const PostPage = () => {
       {/* メイン投稿の表示 (postDataを渡すように修正) */}
       {mainPostData ? (
         <>
-          <Post
-            post={mainPost || mainPostData}
-            onCommentSubmit={handleCommentSubmit}
-          />
+          <Post post={mainPostData} onCommentSubmit={handleCommentSubmit} />
           {/* InputComment (変更なし) */}
           <InputComment
             isOpen={isOpen}
@@ -191,7 +180,69 @@ const PostPage = () => {
           </Center>
         ) : (
           <VStack spacing={4} align="stretch">
-            {comments.length === 0 ? (
+            {/* AIコメントの表示 */}
+            {mainPostData?.aiComments &&
+              mainPostData.aiComments.length > 0 &&
+              mainPostData.aiComments.map((aiComment, index) => {
+                // ランダムなアイコンカラーを選択
+                const colors = [
+                  "blue",
+                  "cream",
+                  "green",
+                  "mint",
+                  "navy",
+                  "olive",
+                  "purple",
+                  "red",
+                  "yellow",
+                ];
+                const randomColor =
+                  colors[Math.floor(Math.random() * colors.length)];
+
+                // ランダムなユーザー名を選択
+                const usernames = [
+                  "あい",
+                  "じぇみー",
+                  "ぐー",
+                  "ちゃぴ",
+                  "こぱ",
+                  "ロット",
+                  "りあ",
+                  "ふぁいあ",
+                  "アラン",
+                  "くら",
+                ];
+                const randomUsername =
+                  usernames[Math.floor(Math.random() * usernames.length)];
+
+                // aiCommentが文字列の場合とオブジェクトの場合に対応
+                const commentText =
+                  typeof aiComment === "string" ? aiComment : aiComment.comment;
+
+                // AIコメント用のPostデータを作成
+                const aiCommentPost = {
+                  id: `ai-${mainPostData.id}-${index}`,
+                  content: commentText,
+                  user: {
+                    username: randomUsername,
+                    iconColor: randomColor,
+                  },
+                  timestamp: mainPostData.timestamp,
+                  likes: [],
+                };
+                return (
+                  <Post
+                    key={aiCommentPost.id}
+                    post={aiCommentPost}
+                    isComment={true}
+                  />
+                );
+              })}
+
+            {/* 通常のコメントの表示 */}
+            {comments.length === 0 &&
+            (!mainPostData?.aiComments ||
+              mainPostData.aiComments.length === 0) ? (
               <Text color="gray.500">まだコメントはありません。</Text>
             ) : (
               comments.map((comment) => (
