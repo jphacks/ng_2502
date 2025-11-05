@@ -22,6 +22,8 @@ from gemini_utils import (
     predict_post_reactions,
     generate_reaction_comments_bulk,
     predict_post_likes,
+    predict_controversy,
+    generate_controversial_comments,
 )
 
 app = FastAPI()
@@ -161,15 +163,23 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 pass
             raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
-    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測）
-    (is_positive, (reply_count, reaction_types), predicted_likes) = await asyncio.gather(
+    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測・炎上判定）
+    (is_positive, (reply_count, reaction_types), predicted_likes, is_controversial) = await asyncio.gather(
         judge_post_positivity(payload.content),
         predict_post_reactions(payload.content),
         predict_post_likes(payload.content),
+        predict_controversy(payload.content),
     )
 
-    # 3. AIコメントを生成
-    generated_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+    # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
+    if is_controversial:
+        # 炎上時：通常コメント + 炎上コメント（合計で多め）
+        controversial_comments = await generate_controversial_comments(payload.content, count=10)
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2])
+        generated_comments = controversial_comments + normal_comments
+    else:
+        # 通常時：通常コメントのみ
+        generated_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
@@ -182,6 +192,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "isPositive": is_positive,
         "predictedReplyCount": reply_count,
         "predictedLikes": predicted_likes,
+        "isControversial": is_controversial,  # 炎上フラグを追加
         "aiComments": generated_comments,
     }
     # ... (Firestore書き込み処理) ...
