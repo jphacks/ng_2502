@@ -86,24 +86,34 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
         <Box pl={{ base: "48px", md: "52px" }}>
           <Text fontSize={{ base: "md", md: "lg" }}>{content}</Text>
         </Box>
-        <HStack spacing={4} justify="flex-end">
-          <ReactionButton
-            label="Like"
-            icon={
-              isLiked ? (
-                <FaHeart fontSize={{ base: "16px", md: "20px" }} />
-              ) : (
-                <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
-              )
-            }
-            onClick={handleLikeClick}
-          />
-          {!isComment && (
+        <HStack justify="flex-end">
+          <HStack spacing={1} align="center">
             <ReactionButton
-              label="Comment"
-              icon={<SlSpeech fontSize={{ base: "16px", md: "20px" }} />}
-              onClick={handleCommentClick}
-            />
+              label="Like"
+              icon={
+                isLiked ? (
+                  <FaHeart fontSize={{ base: "16px", md: "20px" }} />
+                ) : (
+                  <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
+                )
+              } 
+              onClick={handleLikeClick}
+           />
+            {typeof post.predictedLikes === "number" && !isComment && (
+              <Text fontSize="25px" color="#80CBC4" lineHeight="1">
+                {post.predictedLikes}
+              </Text>
+            )}
+          </HStack>
+
+          {!isComment && (
+            <Box ml={10}>
+              <ReactionButton
+                label="Comment"
+                icon={<SlSpeech fontSize={{ base: "16px", md: "20px" }} />}
+                onClick={handleCommentClick}
+              />
+            </Box>
           )}
         </HStack>
         <Divider borderColor="#80CBC4" />
