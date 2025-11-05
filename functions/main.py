@@ -205,7 +205,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
-    await loop.run_in_executor(None, check_controversial_achievement)
+    await loop.run_in_executor(None, lambda: check_controversial_achievement(user_id, is_controversial))
     return {"message": "投稿完了", "postId": post_id}
 
 
