@@ -273,6 +273,7 @@ async def get_posts(user_id: str = Depends(get_current_user)): # ログインユ
         for doc in docs:
             post_data = doc.to_dict()
             post_data["id"] = doc.id
+            post_data["predictedLikes"] = post_data.get("predictedLikes", 0)
             
             # ユーザー情報を取得して投稿データに追加
             user_id_from_post = post_data.get("userId")
