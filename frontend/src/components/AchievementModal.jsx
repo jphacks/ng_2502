@@ -3,95 +3,164 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
+  ModalFooter,
   ModalBody,
   ModalCloseButton,
   Button,
-  useDisclosure,
-  Wrap,
+  Wrap, // アイコンを自動で折り返して並べるためのコンポーネNト
   WrapItem,
-  Badge,
   Spinner,
   Center,
   Text,
+  useToast // エラー通知用
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { auth } from "../firebase"; // Firebase Auth をインポート
+import { auth } from "../firebase"; // 認証トークン取得のため
+import { AchievementIcon } from "./AchievementIcon"; // ステップ2で作成
+import { ACHIEVEMENTS_MASTER } from "../constants/achievementsMaster"; // ステップ1で作成
 
-const API_URL = "https://ng-2502testesu.onrender.com";
+// FastAPIサーバーのURL (ローカル環境)
+const API_URL = "http://localhost:8000";
 
-const AchievementModal = () => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [achievements, setAchievements] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * 実績一覧をAPIから取得して表示するモーダルコンポーネント
+ * @param {boolean} isOpen - モーダルが開いているか (親から渡される)
+ * @param {function} onClose - モーダルを閉じる関数 (親から渡される)
+ */
+export const AchievementModal = ({ isOpen, onClose }) => {
+  // 1. stateの定義
+  // unlockedIds: APIから取得した「達成済み実績のIDリスト」を保存する (例: ["post_10", "like_total_100"])
+  const [unlockedIds, setUnlockedIds] = useState([]);
+  // loading: 読み込み中かどうかを示す「旗」
+  const [loading, setLoading] = useState(true);
+  // error: エラーメッセージ
+  const [error, setError] = useState(null);
+  const toast = useToast(); // エラー通知UI
 
+  // 2. API通信の実行
+  // useEffectは、「[ ]」の中身が変わったときに実行される
+  // 今回は [isOpen] を指定したので、モーダルが開いた(isOpenがtrueになった)瞬間に実行される
   useEffect(() => {
+    // モーダルが開いていなければ、通信しない
+    if (!isOpen) return;
+
+    // 実行する処理
     const fetchAchievements = async () => {
-      if (!isOpen) return;
-      setIsLoading(true);
+      setLoading(true);
+      setError(null); // エラーをリセット
+      
+      const user = auth.currentUser;
+      if (!user) {
+        console.warn("実績取得: ユーザー未ログイン");
+        setError("ログインしていません。");
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const user = auth.currentUser;
-        if (!user) {
-          console.warn("ログインしていません");
-          setAchievements([]);
-          setIsLoading(false);
-          return;
-        }
-
-        const token = await user.getIdToken(); // Firebaseトークンを取得
-        const response = await axios.get(`${API_URL}/achievements`, {
+        // Firebase Authから認証トークン（通行証）を取得
+        const idToken = await user.getIdToken();
+        
+        // バックエンド(FastAPI)の /api/achievements/status APIを呼び出す
+        const response = await axios.get(`${API_URL}/api/achievements/status`, {
           headers: {
-            Authorization: `Bearer ${token}`, // トークンをヘッダーに追加
-          },
+            Authorization: `Bearer ${idToken}` // 認証トークンをヘッダーに付けて送信
+          }
         });
+        
+        // バックエンドからは { achievements: ["post_10", "like_total_100"] } のようなデータが返ってくる
+        setUnlockedIds(response.data.achievements || []);
 
-        setAchievements(response.data.achievements ?? []);
-        console.log("✅ 称号取得:", response.data.achievements);
       } catch (err) {
-        console.error("🔥 称号取得失敗:", err);
-        setAchievements([]);
+        console.error("🔥 実績の取得に失敗:", err);
+        setError("実績の取得に失敗しました。");
+        toast({
+          title: "エラー",
+          description: "実績の取得に失敗しました。時間をおいて再度お試しください。",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
       } finally {
-        setIsLoading(false);
+        setLoading(false); // 成功しても失敗しても、ローディングは解除
       }
     };
 
     fetchAchievements();
-  }, [isOpen]);
 
+  }, [isOpen, toast]); // isOpen または toast が変わったときに再実行 (実質、isOpenがtrueになったとき)
+
+  // 3. 表示するデータの作成
+  // ACHIEVEMENTS_MASTER（すべての実績リスト）を元に、
+  // APIから取得した unlockedIds（達成済みリスト）と照合する
+  const allAchievements = Object.keys(ACHIEVEMENTS_MASTER).map(id => {
+    // マスターリストから実績情報を取得
+    const achievementData = ACHIEVEMENTS_MASTER[id];
+    // APIから取得したリストにIDが含まれているかチェック
+    const isUnlocked = unlockedIds.includes(id);
+
+    // 画面表示用の完全なオブジェクトを作成して返す
+    return {
+      id: id,
+      ...achievementData, // name, description, icon を展開
+      isUnlocked: isUnlocked // 達成済みかどうか
+    };
+  });
+
+  // 4. モーダルの中身を「ローディング中」「エラー時」「成功時」で切り替え
+  const renderBodyContent = () => {
+    // 4a. ローディング中
+    if (loading) {
+      return (
+        <Center h="200px">
+          <Spinner size="xl" color="orange.400" />
+        </Center>
+      );
+    }
+    // 4b. エラー発生時
+    if (error) {
+      return (
+        <Center h="200px">
+          <Text color="red.500">{error}</Text>
+        </Center>
+      );
+    }
+    // 4c. 成功時（実績が0件の場合も含む）
+    return (
+      <Wrap spacing={6} justify="center" p={4}>
+        {allAchievements.length > 0 ? (
+          allAchievements.map((ach) => (
+            <WrapItem key={ach.id}>
+              {/* ステップ2で作成したコンポーネントに、データを渡す */}
+              <AchievementIcon
+                achievement={ach}
+                isUnlocked={ach.isUnlocked}
+              />
+            </WrapItem>
+          ))
+        ) : (
+          <Text color="gray.500">実績がまだありません。</Text>
+        )}
+      </Wrap>
+    );
+  };
+
+  // 5. モーダル本体のJSX
   return (
-    <>
-      <Button onClick={onOpen} colorScheme="teal">
-        称号一覧
-      </Button>
-
-      <Modal isOpen={isOpen} onClose={onClose} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>称号一覧</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {isLoading ? (
-              <Center py={4}>
-                <Spinner color="teal.400" />
-              </Center>
-            ) : achievements.length > 0 ? (
-              <Wrap spacing={2}>
-                {achievements.map((title, index) => (
-                  <WrapItem key={index}>
-                    <Badge colorScheme="purple" fontSize="md">
-                      {title}
-                    </Badge>
-                  </WrapItem>
-                ))}
-              </Wrap>
-            ) : (
-              <Text color="gray.500">まだ称号はありません。</Text>
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </>
+    <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
+      <ModalOverlay />
+      <ModalContent borderRadius="2xl" mx={4}>
+        <ModalHeader>実績一覧</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          {/* 4. で作成したロジックをここで呼び出す */}
+          {renderBodyContent()}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" onClick={onClose}>とじる</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 };
-
-export default AchievementModal;
