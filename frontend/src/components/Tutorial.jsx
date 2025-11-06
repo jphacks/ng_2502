@@ -63,13 +63,14 @@ export default function SlideModal({ isOpen, onClose }) {
             justifyContent="center"
             maxH={{ base: "80vh", md: "70vh" }}
             overflow="hidden"
-            w={{ base: "90vw", md: "auto" }}
+            w="100%"
+            maxW={{ base: "90vw", md: "60vw" }}
           >
             <Image
               src={images[index]}
               alt={`Slide ${index + 1}`}
               maxH={{ base: "80vh", md: "70vh" }}
-              w={{ base: "90vw", md: "auto" }}
+              maxW="100%"
               objectFit="contain"
             />
           </Box>
