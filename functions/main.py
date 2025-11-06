@@ -172,11 +172,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         predict_post_likes(payload.content),
         predict_controversy(payload.content),
     )
-
-    # 3. AIコメントを生成
     
-    generated_comments = generated_comments1 + generated_comments2
-
     # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
     if is_controversial:
         # 炎上時：通常コメント + 炎上コメント（合計で多め）
@@ -186,9 +182,8 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     else:
         # 通常時：通常コメントのみ
         normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
-        link_comments =await generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam")
+        link_comments =  await generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam")
         generated_comments = normal_comments + link_comments
-        
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
