@@ -1,10 +1,14 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, useDisclosure } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 import { ImageButton } from "./ImageButton";
 import { CircleIcon } from "./CircleIcon";
 import AppIconNoText from "../assets/AppIconNotext.png";
 import { TextButton } from "./TextButton";
 import { useUser } from "../hooks/useUser";
+import Tutorial from "./Tutorial";
+import { FaRegQuestionCircle } from "react-icons/fa";
+import { MarkButton } from "./MarkButton";
+
 // --- アイコンのインポートと対応表 ---
 import BlueIcon from "../assets/UserIcon_Blue.png";
 import CreamIcon from "../assets/UserIcon_Cream.png";
@@ -32,6 +36,8 @@ export const Header = () => {
   const { iconColor } = useUser();
   const { src, alt } = iconMap[iconColor] || iconMap.blue;
 
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
   return (
     <Flex
       as="header"
@@ -44,17 +50,24 @@ export const Header = () => {
       w="100%"
       bg="#FFFFFF"
     >
-      <Box flex="1">
+      <Box flex="1" display="flex" alignItems="center" gap={2}>
         <Link to="/profile">
           <CircleIcon src={src} alt={alt} />
         </Link>
       </Box>
+
       <Box>
         <Link to="/list">
           <ImageButton img={AppIconNoText} alt="SNR Logo" />
         </Link>
       </Box>
-      <Box flex="1" display="flex" justifyContent="flex-end">
+      <Box flex="1" display="flex" justifyContent="flex-end" gap={2}>
+        <MarkButton
+          label="Image"
+          onClick={onOpen}
+          icon={<FaRegQuestionCircle />}
+        />
+        <Tutorial isOpen={isOpen} onClose={onClose} />
         <Link to="/input">
           <TextButton>つくる</TextButton>
         </Link>
