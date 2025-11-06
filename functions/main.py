@@ -21,7 +21,10 @@ from gemini_utils import (
     judge_post_positivity,
     predict_post_reactions,
     generate_reaction_comments_bulk,
+    generate_link_comments,
     predict_post_likes,
+    predict_controversy,
+    generate_controversial_comments,
 )
 
 app = FastAPI()
@@ -118,6 +121,7 @@ class ProfileUpdate(BaseModel):
 
 # --- APIエンドポイントの定義 ---
 
+#投稿作成AIコメント追加データベース保存
 @app.post("/post")
 #async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
 async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)):
@@ -161,15 +165,25 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 pass
             raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
-    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測）
-    (is_positive, (reply_count, reaction_types), predicted_likes) = await asyncio.gather(
+    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測・炎上判定）
+    (is_positive, (reply_count, reaction_types), predicted_likes, is_controversial) = await asyncio.gather(
         judge_post_positivity(payload.content),
         predict_post_reactions(payload.content),
         predict_post_likes(payload.content),
+        predict_controversy(payload.content),
     )
-
-    # 3. AIコメントを生成
-    generated_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+    
+    # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
+    if is_controversial:
+        # 炎上時：通常コメント + 炎上コメント（合計で多め）
+        controversial_comments = await generate_controversial_comments(payload.content, count=10)
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2])
+        generated_comments = controversial_comments + normal_comments
+    else:
+        # 通常時：通常コメントのみ
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+        link_comments =  await generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam")
+        generated_comments = normal_comments + link_comments
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
@@ -182,6 +196,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "isPositive": is_positive,
         "predictedReplyCount": reply_count,
         "predictedLikes": predicted_likes,
+        "isControversial": is_controversial,  # 炎上フラグを追加
         "aiComments": generated_comments,
     }
     # ... (Firestore書き込み処理) ...
@@ -194,9 +209,11 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
+    await loop.run_in_executor(None, lambda: check_controversial_achievement(user_id, is_controversial))
     return {"message": "投稿完了", "postId": post_id}
 
 
+#いいねのon/off切り替え
 @app.post("/like/{post_id}")
 async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
     # body.get("userId") の代わりに認証済みの user_id を使う
@@ -218,6 +235,7 @@ async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): #
     return {"message": "いいね更新", "likes": new_likes}
 
 
+#リプライ取得
 @app.get("/replies/{post_id}")
 async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
     loop = asyncio.get_running_loop()
@@ -263,6 +281,7 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
     return results
 
 
+#投稿一覧取得
 @app.get("/posts")
 async def get_posts(user_id: str = Depends(get_current_user)): # ログインユーザーの投稿のみ取得
     loop = asyncio.get_running_loop()
@@ -311,6 +330,7 @@ async def get_posts(user_id: str = Depends(get_current_user)): # ログインユ
     return results
 
 
+
 # --- 変更点4: プロフィール取得APIを追加 ---
 @app.get("/profile")
 async def get_profile(user_id: str = Depends(get_current_user)):
@@ -356,14 +376,25 @@ def update_achievements(user_id: str, post_count: int):
     existing = doc.to_dict().get("unlocked", []) if doc.exists else []
     achievements = set(existing)  # 重複を避けるために set にする
 
-    if post_count >= 1:
-        achievements.add("初投稿")
     if post_count >= 10:
         achievements.add("投稿10件達成")
     if post_count >= 50:
         achievements.add("投稿職人")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
+
+def check_controversial_achievement(user_id: str, is_controversial: bool):
+    if not is_controversial:
+        return
+
+    ach_ref = db.collection("achievements").document(user_id)
+    ach_doc = ach_ref.get()
+    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+
+    if "炎上経験者" not in unlocked:
+        ach_ref.set({
+            "unlocked": unlocked + ["炎上経験者"]
+        }, merge=True)
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):

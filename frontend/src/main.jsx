@@ -9,6 +9,7 @@ const PostPage = lazy(() => import("./pages/PostPage.jsx"));
 const ListPage = lazy(() => import("./pages/ListPage.jsx"));
 const Layout = lazy(() => import("./components/Layout.jsx"));
 const Post = lazy(() => import("./components/Post.jsx"));
+const SpamPage = lazy(() => import("./pages/SpamPage.jsx"));
 import "./index.css";
 
 // 1. ChakraProvider をインポートします
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
   {
     path: "input", // /input
     element: <InputPage />,
+  },
+  {
+    path: "spam", // /post
+    element: <SpamPage />,
   },
   {
     path: "profile", // /profile

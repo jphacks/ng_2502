@@ -139,3 +139,158 @@ async def predict_post_likes(text: str) -> int:
         return max(0, min(100, predicted))
     except Exception:
         return 3
+
+
+async def predict_controversy(text: str) -> bool:
+    """
+    投稿が炎上するリスクがあるかを判定する。
+    個人情報、攻撃的な内容、センシティブなトピックを検出。
+    炎上リスクがある場合は True を返す。
+    """
+    if not gemini_model:
+        return False
+
+    prompt = f"""
+あなたはSNS炎上リスク判定AIです。
+以下の投稿が炎上する可能性があるか判定してください。
+
+炎上リスクの判定基準:
+1. 個人情報（名前、住所、電話番号、学校名など）が含まれている
+2. 特定の人物や集団への攻撃的な内容
+3. 差別的な表現や偏見を含む内容
+4. センシティブなトピック（政治、宗教、人種など）
+5. 誤解を招きやすい誇張表現や虚偽の可能性がある内容
+
+投稿: "{text}"
+
+炎上リスクがある場合は「YES」、ない場合は「NO」だけで答えてください。
+"""
+    try:
+        response = await gemini_model.generate_content_async(prompt)
+        result = response.text.strip().upper()
+        return "YES" in result
+    except Exception:
+        return False
+
+
+async def generate_controversial_comments(text: str, count: int = 10) -> list[str]:
+    """
+    炎上時の厳しいコメントを生成する。
+    個人情報が含まれている場合はそれに言及し、批判的な内容を含める。
+    """
+    if not gemini_model:
+        return ["これはダメだよ😠" for _ in range(count)]
+
+    # まず投稿から個人情報を抽出
+    extract_prompt = f"""
+以下の投稿から、個人を特定できる情報（名前、場所、学校名など）を抽出してください。
+見つからない場合は「なし」と答えてください。
+
+投稿: "{text}"
+"""
+    
+    personal_info = "なし"
+    try:
+        extract_response = await gemini_model.generate_content_async(extract_prompt)
+        personal_info = extract_response.text.strip()
+    except Exception:
+        pass
+
+    comments: list[str] = []
+    
+    for i in range(count):
+        # コメントのバリエーションを作るためにインデックスを利用
+        if i < 3 and personal_info != "なし":
+            # 個人情報に言及するコメント
+            comment_prompt = f"""
+あなたは炎上しているSNS投稿にコメントをする人です。
+以下の投稿に対して、個人情報が含まれていることを指摘する厳しいコメントを1件生成してください。
+
+投稿: "{text}"
+個人情報: {personal_info}
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- 個人情報の危険性を指摘する内容
+- 小学生にも読める言葉で
+
+"""
+        elif i < 6:
+            # 批判的なコメント
+            comment_prompt = f"""
+あなたは炎上しているSNS投稿にコメントをする人です。
+以下の投稿に対して、批判的で厳しいコメントを1件生成してください。
+
+投稿: "{text}"
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- 怒りや失望の絵文字を使ってもよい
+- 内容を批判する
+- 小学生にも読める言葉で
+
+例: 「こんなことかいちゃダメでしょ」
+"""
+        else:
+            # 警告・注意喚起のコメント
+            comment_prompt = f"""
+あなたは炎上しているSNS投稿にコメントをする人です。
+以下の投稿に対して、警告や注意を促すコメントを1件生成してください。
+
+投稿: "{text}"
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- 危険性を伝える内容
+- 小学生にも読める言葉で
+
+例: 「これけしたほうがいいよ？」
+"""
+        
+        try:
+            response = await gemini_model.generate_content_async(comment_prompt)
+            comment_text = response.text.strip()
+            # プロンプトの例文が含まれていたら除去
+            if "例:" in comment_text:
+                comment_text = comment_text.split("例:")[0].strip()
+        except Exception:
+            # エラー時のデフォルトコメント
+            if i < 3 and personal_info != "なし":
+                comment_text = "じょうほうがもれてるよ？"
+            elif i < 6:
+                comment_text = "これはよくない！"
+            else:
+                comment_text = "けしたほうがいいよ？"
+
+        comments.append(comment_text)
+    
+    return comments
+
+
+#あおりコメント作成関数
+async def generate_link_comments(text: str, num_comments: int = 2, link: str = None) -> list[str]:
+    """
+    投稿に対して、あおりコメントや誘導リンクを自動生成する関数。
+    """
+    comments = []
+    # 1～num_comments件生成
+    for i in range(num_comments):
+        # promptでパターンを指定
+        prompt = (
+            f"ユーザー投稿：「{text}」\n"
+            "ツイッターリプライでよくある、あおりコメントまたは怪しい誘導リンクつきコメントを日本語で1つ作ってください。"
+            "小学生向けに、なるべく難しい漢字は使わず、短い文章にしてください"
+            f"怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。"
+            "あおりコメントとリンク付きコメントの割合は1:1くらいで。"
+            "出力するのはコメントだけで、余計な説明は不要です。"
+        )
+        try:
+            response = await gemini_model.generate_content_async(prompt)
+            comments.append(response.text.strip())
+        except Exception as e:
+            comments.append(f"AI生成エラー: {e}")
+    return comments
+
