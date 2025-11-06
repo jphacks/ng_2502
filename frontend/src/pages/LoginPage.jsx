@@ -48,6 +48,7 @@ const LoginPage = () => {
 
   // 新規登録
   const handleRegister = async () => {
+    //Authにユーザー登録
     setMessage("");
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -62,7 +63,7 @@ const LoginPage = () => {
       // localStorageにIDトークンを保存
       localStorage.setItem("firebaseIdToken", idToken);
       // --- ▲▲▲ ここまで追加 ▲▲▲ ---
-      console.log("🆕 新規登録成功:", userCredential.user.email);
+      console.log("🆕 新規登録成功:", user.email);
 
       navigate("/profile");
     } catch (error) {

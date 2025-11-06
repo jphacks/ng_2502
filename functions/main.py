@@ -21,6 +21,7 @@ from gemini_utils import (
     judge_post_positivity,
     predict_post_reactions,
     generate_reaction_comments_bulk,
+    generate_link_comments,
     predict_post_likes,
     predict_controversy,
     generate_controversial_comments,
@@ -120,6 +121,7 @@ class ProfileUpdate(BaseModel):
 
 # --- APIエンドポイントの定義 ---
 
+#投稿作成AIコメント追加データベース保存
 @app.post("/post")
 #async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
 async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)):
@@ -170,7 +172,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         predict_post_likes(payload.content),
         predict_controversy(payload.content),
     )
-
+    
     # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
     if is_controversial:
         # 炎上時：通常コメント + 炎上コメント（合計で多め）
@@ -179,7 +181,9 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         generated_comments = controversial_comments + normal_comments
     else:
         # 通常時：通常コメントのみ
-        generated_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+        link_comments =  await generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam")
+        generated_comments = normal_comments + link_comments
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
@@ -209,6 +213,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     return {"message": "投稿完了", "postId": post_id}
 
 
+#いいねのon/off切り替え
 @app.post("/like/{post_id}")
 async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
     # body.get("userId") の代わりに認証済みの user_id を使う
@@ -230,6 +235,7 @@ async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): #
     return {"message": "いいね更新", "likes": new_likes}
 
 
+#リプライ取得
 @app.get("/replies/{post_id}")
 async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
     loop = asyncio.get_running_loop()
@@ -275,6 +281,7 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
     return results
 
 
+#投稿一覧取得
 @app.get("/posts")
 async def get_posts(user_id: str = Depends(get_current_user)): # ログインユーザーの投稿のみ取得
     loop = asyncio.get_running_loop()
@@ -321,6 +328,7 @@ async def get_posts(user_id: str = Depends(get_current_user)): # ログインユ
         return posts_list
     results = await loop.run_in_executor(None, fetch)
     return results
+
 
 
 # --- 変更点4: プロフィール取得APIを追加 ---

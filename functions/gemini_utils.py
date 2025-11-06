@@ -268,3 +268,29 @@ async def generate_controversial_comments(text: str, count: int = 10) -> list[st
         comments.append(comment_text)
     
     return comments
+
+
+#あおりコメント作成関数
+async def generate_link_comments(text: str, num_comments: int = 2, link: str = None) -> list[str]:
+    """
+    投稿に対して、あおりコメントや誘導リンクを自動生成する関数。
+    """
+    comments = []
+    # 1～num_comments件生成
+    for i in range(num_comments):
+        # promptでパターンを指定
+        prompt = (
+            f"ユーザー投稿：「{text}」\n"
+            "ツイッターリプライでよくある、あおりコメントまたは怪しい誘導リンクつきコメントを日本語で1つ作ってください。"
+            "小学生向けに、なるべく難しい漢字は使わず、短い文章にしてください"
+            f"怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。"
+            "あおりコメントとリンク付きコメントの割合は1:1くらいで。"
+            "出力するのはコメントだけで、余計な説明は不要です。"
+        )
+        try:
+            response = await gemini_model.generate_content_async(prompt)
+            comments.append(response.text.strip())
+        except Exception as e:
+            comments.append(f"AI生成エラー: {e}")
+    return comments
+
