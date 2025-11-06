@@ -35,11 +35,7 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-const Post = ({
-  post,
-  onCommentSubmit = () => {},
-  isComment = false,
-}) => {
+const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
   const [isLiked, setIsLiked] = useState(false);
   const { isOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
@@ -47,8 +43,10 @@ const Post = ({
   // post propがない場合は何も表示しない
   if (!post) return null;
 
-  const { user, content } = post;
-  const { src, alt } = iconMap[user.iconColor] || iconMap.blue;
+  const { content } = post;
+  // user 情報がない場合に備えてデフォルトを用意
+  const safeUser = post.user || { username: "ユーザー名", iconColor: "blue" };
+  const { src, alt } = iconMap[safeUser.iconColor] || iconMap.blue;
 
   const handleLikeClick = (e) => {
     e.stopPropagation(); // 親要素へのイベント伝播を停止
@@ -81,7 +79,7 @@ const Post = ({
           <CircleIcon src={src} alt={alt} />
           <VStack align="start" spacing={0}>
             <Text fontWeight="bold" fontSize={{ base: "sm", md: "md" }}>
-              {user.username || "ユーザー名"}
+              {safeUser.username || "ユーザー名"}
             </Text>
           </VStack>
         </HStack>

@@ -20,7 +20,8 @@ from gemini_utils import (
     validate_post_safety,
     judge_post_positivity,
     predict_post_reactions,
-    generate_reaction_comments_bulk
+    generate_reaction_comments_bulk,
+    generate_link_comments
 )
 
 app = FastAPI()
@@ -124,10 +125,42 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     #user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
     # payload.userId の代わりに認証済みの user_id を使う
     # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
-    # 1. AIによる安全性チェック
-    is_safe, reason = await validate_post_safety(payload.content)
-    if not is_safe:
-        raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
+    
+    # ユーザーのモード情報を取得
+    loop = asyncio.get_running_loop()
+    def get_user_mode():
+        user_ref = db.collection("users").document(user_id)
+        doc = user_ref.get()
+        if doc.exists:
+            return doc.to_dict().get("mode", "てんさく")  # デフォルトは「てんさく」
+        return "てんさく"  # ユーザー情報がない場合もデフォルトは「てんさく」
+    
+    user_mode = await loop.run_in_executor(None, get_user_mode)
+    
+    # 1. AIによる安全性チェック（てんさくモードの時のみ）
+    if user_mode == "てんさく":
+        is_safe, reason = await validate_post_safety(payload.content)
+        if not is_safe:
+            # NG理由をデータベースに記録してからエラーを返す
+            def write_rejected():
+                doc_ref = db.collection("rejected_posts").document()
+                doc_ref.set({
+                    "userId": user_id,
+                    "content": payload.content,
+                    "imageUrl": payload.imageUrl,
+                    "replyTo": payload.replyTo,
+                    "timestamp": datetime.now(timezone.utc),
+                    "likes": [],
+                    "isSafe": False,
+                    "safetyReason": reason,
+                })
+                return doc_ref.id
+            try:
+                rejected_id = await loop.run_in_executor(None, write_rejected)
+                # 必要であれば rejected_id をログなどに活用可能
+            finally:
+                pass
+            raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
     # 2. 残りのAI分析を並列実行
     (is_positive, (reply_count, reaction_types)) = await asyncio.gather(
@@ -136,7 +169,9 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     )
 
     # 3. AIコメントを生成
-    generated_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
+    generated_comments1, generated_comments2 = await asyncio.gather ( generate_reaction_comments_bulk(payload.content, reaction_types),generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam"))
+    generated_comments = generated_comments1 + generated_comments2
+
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
@@ -158,30 +193,6 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         return doc_ref.id
     post_id = await loop.run_in_executor(None, write_to_firestore)
     return {"message": "投稿完了", "postId": post_id}
-
-#リプライ保存
-class ReplyCreate(BaseModel):
-    content: str
-    user: str
-    iconColor: str
-
-@app.post("/replies/{post_id}")
-async def create_reply(post_id: str, payload: ReplyCreate):
-    loop = asyncio.get_running_loop()
-    def write_reply():
-        replies_ref = db.collection("posts")
-        new_reply = {
-            "content": payload.content,
-            "user": payload.user,
-            "iconColor": payload.iconColor,
-            "replyTo": post_id,
-            "timestamp": datetime.now(timezone.utc)
-        }
-        doc_ref = replies_ref.document()
-        doc_ref.set(new_reply)
-        return {"id": doc_ref.id, **new_reply}
-    result = await loop.run_in_executor(None, write_reply)
-    return result
 
 
 #いいねのon/off切り替え
@@ -212,24 +223,88 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
     loop = asyncio.get_running_loop()
     def fetch():
         docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
-        return [{"id": d.id, **d.to_dict()} for d in docs]
+        replies_list = []
+        for doc in docs:
+            reply_data = doc.to_dict()
+            reply_data["id"] = doc.id
+            
+            # ユーザー情報を取得して投稿データに追加
+            user_id = reply_data.get("userId")
+            if user_id:
+                try:
+                    user_ref = db.collection("users").document(user_id)
+                    user_doc = user_ref.get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        reply_data["user"] = {
+                            "username": user_data.get("username", "ユーザー名"),
+                            "iconColor": user_data.get("iconColor", "blue")
+                        }
+                    else:
+                        reply_data["user"] = {
+                            "username": "ユーザー名",
+                            "iconColor": "blue"
+                        }
+                except Exception as e:
+                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id}): {e}")
+                    reply_data["user"] = {
+                        "username": "ユーザー名",
+                        "iconColor": "blue"
+                    }
+            else:
+                reply_data["user"] = {
+                    "username": "ユーザー名",
+                    "iconColor": "blue"
+                }
+            
+            replies_list.append(reply_data)
+        return replies_list
     results = await loop.run_in_executor(None, fetch)
     return results
 
 
 #投稿一覧取得
 @app.get("/posts")
-async def get_posts(): # 投稿一覧取得も認証不要の場合が多い
+async def get_posts(user_id: str = Depends(get_current_user)): # ログインユーザーの投稿のみ取得
     loop = asyncio.get_running_loop()
     def fetch():
-        docs = db.collection("posts").where("replyTo", "==", None).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
-        # ★★★ ここでユーザー情報を付与する必要があるかもしれない ★★★
-        # (Firestoreのpostsに直接ユーザー名やアイコン色を保存していない場合)
+        docs = db.collection("posts").where("replyTo", "==", None).where("userId", "==", user_id).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
+        # ユーザー情報を付与する
         posts_list = []
         for doc in docs:
             post_data = doc.to_dict()
             post_data["id"] = doc.id
-            # 必要であれば、post_data["userId"] を使って別途 users コレクションから情報を取得する
+            
+            # ユーザー情報を取得して投稿データに追加
+            user_id_from_post = post_data.get("userId")
+            if user_id_from_post:
+                try:
+                    user_ref = db.collection("users").document(user_id_from_post)
+                    user_doc = user_ref.get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        post_data["user"] = {
+                            "username": user_data.get("username", "ユーザー名"),
+                            "iconColor": user_data.get("iconColor", "blue")
+                        }
+                    else:
+                        # ユーザー情報が見つからない場合はデフォルト値
+                        post_data["user"] = {
+                            "username": "ユーザー名",
+                            "iconColor": "blue"
+                        }
+                except Exception as e:
+                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id_from_post}): {e}")
+                    post_data["user"] = {
+                        "username": "ユーザー名",
+                        "iconColor": "blue"
+                    }
+            else:
+                post_data["user"] = {
+                    "username": "ユーザー名",
+                    "iconColor": "blue"
+                }
+            
             posts_list.append(post_data)
         return posts_list
     results = await loop.run_in_executor(None, fetch)

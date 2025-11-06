@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { VStack, Spinner, Center, Text } from "@chakra-ui/react";
 import { Post } from "../components/Post";
 import axios from "axios"; // API通信にaxiosを使用
-
-// 変更の必要なし: import { auth } from "../firebase"; // 認証状態のチェックだけなら残してもOK
+import { auth } from "../firebase"; // 認証情報を取得
+import { onAuthStateChanged } from "firebase/auth"; // 認証初期化完了を待つ
 
 // --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
 // .envファイルで管理するのがベストですが、ここでは直接記述します
@@ -16,26 +16,36 @@ const ListPage = () => {
   const [loading, setLoading] = useState(true); // ページを開いたらすぐに読み込みが始まるため
 
   useEffect(() => {
-    // --- 変更点4: useEffectの中身をaxiosでのAPI呼び出しに全面変更 ---
-    const fetchPosts = async () => {
+    // リロード直後は auth.currentUser が null のことがあるため
+    // 認証状態の初期化完了(onAuthStateChanged)を待ってから取得する
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn("ログインしていません");
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
-        // FastAPIの /posts エンドポイントにGETリクエストを送信
-        const response = await axios.get(`${API_URL}/posts`); //本番APIのURLに変更
+        const token = await user.getIdToken();
+        const response = await axios.get(`${API_URL}/posts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         console.log("✅ APIから投稿データを取得しました:", response.data);
-        // サーバーから返ってきた投稿データでstateを更新
-        setPosts(response.data);
+        setPosts(response.data || []);
       } catch (error) {
         console.error("🔥 投稿データの取得中にエラーが発生しました:", error);
-        // エラーが発生した場合、ユーザーに何も表示されないのを避けるためpostsを空にする
         setPosts([]);
       } finally {
-        // データ取得が成功しても失敗しても、最後に必ずローディング状態をfalseにする
         setLoading(false);
       }
-    };
+    });
 
-    fetchPosts();
-  }, []); // 空の配列[]を指定すると、この処理はページが最初に表示されたときに1回だけ実行される
+    return () => unsubscribe();
+  }, []);
 
   // --- ローディング中の表示（変更なし） ---
   if (loading) {
@@ -56,10 +66,7 @@ const ListPage = () => {
           </Text>
         </Center>
       ) : (
-        posts.map((post) => (
-          // Postコンポーネントに渡すpropsの名前をpostDataに変更（任意ですが推奨）
-          <Post key={post.id} postData={post} />
-        ))
+        posts.map((post) => <Post key={post.id} post={post} />)
       )}
     </VStack>
   );

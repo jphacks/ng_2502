@@ -14,6 +14,7 @@ import { useState, useEffect } from "react"; // useEffectを追加
 import { IoIosArrowBack } from "react-icons/io";
 import { useUser } from "../hooks/useUser";
 import { InputComment } from "../components/InputComment";
+import { NgReason } from "../components/NgReason";
 import { useDisclosure } from "@chakra-ui/react";
 import { useEffect } from "react";
 import axios from "axios"; // axiosをインポート
@@ -34,6 +35,13 @@ const PostPage = () => {
 
   const { iconColor, username } = useUser(); // Contextから現在のユーザー情報を取得
   const { isOpen, onOpen, onClose } = useDisclosure(); // コメント入力モーダルの制御
+  // NG理由モーダル
+  const {
+    isOpen: isNgOpen,
+    onOpen: onNgOpen,
+    onClose: onNgClose,
+  } = useDisclosure();
+  const [ngReason, setNgReason] = useState("");
 
   // --- 変更点2: useEffectでコメントを取得する処理を追加 ---
   useEffect(() => {
@@ -48,7 +56,8 @@ const PostPage = () => {
         const response = await axios.get(
           `${API_URL}/replies/${mainPostData.id}`
         );
-        setComments(response.data); // 取得したコメントでstateを更新
+        // バックエンドがユーザー情報を含めて返すので、そのまま使用
+        setComments(response.data || []);
         console.log("✅ コメントを取得:", response.data);
       } catch (error) {
         console.error("🔥 コメントの取得に失敗:", error);
@@ -86,6 +95,7 @@ const PostPage = () => {
       userId: user.uid,
       content: newCommentText,
       replyTo: mainPostData.id, // どの投稿への返信かを示すID
+      imageUrl: null,
     };
 
     try {
@@ -110,11 +120,15 @@ const PostPage = () => {
       onClose(); // コメント送信後はInputCommentを閉じる
     } catch (error) {
       console.error("🔥 コメントの投稿に失敗しました:", error);
-      alert(
-        `コメントの投稿に失敗しました: ${
-          error.response?.data?.detail || error.message
-        }`
-      );
+      const status = error.response?.status;
+      const detail = error.response?.data?.detail;
+      if (status === 400 && typeof detail === "string") {
+        const extracted = detail.replace(/^不適切な投稿です[:：]\s?/, "");
+        setNgReason(extracted || detail);
+        onNgOpen();
+      } else {
+        alert(`コメントの投稿に失敗しました: ${detail || error.message}`);
+      }
     }
   };
 
@@ -137,13 +151,15 @@ const PostPage = () => {
       {/* メイン投稿の表示 (postDataを渡すように修正) */}
       {mainPostData ? (
         <>
-          <Post postData={mainPostData} onCommentSubmit={handleCommentSubmit} />
+          <Post post={mainPostData} onCommentSubmit={handleCommentSubmit} />
           {/* InputComment (変更なし) */}
           <InputComment
             isOpen={isOpen}
             onClose={onClose}
             onCommentSubmit={handleCommentSubmit}
           />
+          {/* NG理由モーダル */}
+          <NgReason isOpen={isNgOpen} onClose={onNgClose} reason={ngReason} />
         </>
       ) : (
         <Center h="20vh">
@@ -165,12 +181,58 @@ const PostPage = () => {
           </Center>
         ) : (
           <VStack spacing={4} align="stretch">
-            {comments.length === 0 ? (
+            {/* AIコメントの表示 */}
+            {mainPostData?.aiComments &&
+              mainPostData.aiComments.length > 0 &&
+              mainPostData.aiComments.map((aiComment, index) => {
+                // ランダムなアイコンカラーを選択
+                const colors = [
+                  "blue",
+                  "cream",
+                  "green",
+                  "mint",
+                  "navy",
+                  "olive",
+                  "purple",
+                  "red",
+                  "yellow",
+                ];
+                const randomColor =
+                  colors[Math.floor(Math.random() * colors.length)];
+
+                // aiCommentが文字列の場合とオブジェクトの場合に対応
+                const commentText =
+                  typeof aiComment === "string" ? aiComment : aiComment.comment;
+
+                // AIコメント用のPostデータを作成
+                const aiCommentPost = {
+                  id: `ai-${mainPostData.id}-${index}`,
+                  content: commentText,
+                  user: {
+                    username: "あい",
+                    iconColor: randomColor,
+                  },
+                  timestamp: mainPostData.timestamp,
+                  likes: [],
+                };
+                return (
+                  <Post
+                    key={aiCommentPost.id}
+                    post={aiCommentPost}
+                    isComment={true}
+                  />
+                );
+              })}
+
+            {/* 通常のコメントの表示 */}
+            {comments.length === 0 &&
+            (!mainPostData?.aiComments ||
+              mainPostData.aiComments.length === 0) ? (
               <Text color="gray.500">まだコメントはありません。</Text>
             ) : (
               comments.map((comment) => (
                 // コメントもPostコンポーネントで表示 (postDataを渡すように修正)
-                <Post key={comment.id} postData={comment} isComment={true} />
+                <Post key={comment.id} post={comment} isComment={true} />
               ))
             )}
           </VStack>
