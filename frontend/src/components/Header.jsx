@@ -87,7 +87,7 @@
             icon={<FaRegQuestionCircle />}
           />
           <Link to="/input">
-            <TextButton>つくる</TextButton>
+            <TextButton mt="15px">つくる</TextButton>
           </Link>
         </Box>
         {/* --- 変更点6: モーダル本体は、Flexの最後にまとめて配置 --- */}
