@@ -16,7 +16,6 @@ import { useUser } from "../hooks/useUser";
 import { InputComment } from "../components/InputComment";
 import { NgReason } from "../components/NgReason";
 import { useDisclosure } from "@chakra-ui/react";
-import { useEffect } from "react";
 import axios from "axios"; // axiosをインポート
 import { auth } from "../firebase"; // ログインユーザー情報を取得
 
@@ -200,6 +199,22 @@ const PostPage = () => {
                 const randomColor =
                   colors[Math.floor(Math.random() * colors.length)];
 
+                // ランダムなユーザー名を選択
+                const usernames = [
+                  "あい",
+                  "じぇみー",
+                  "ぐー",
+                  "ちゃぴ",
+                  "こぱ",
+                  "ロット",
+                  "りあ",
+                  "ふぁいあ",
+                  "アラン",
+                  "くら",
+                ];
+                const randomUsername =
+                  usernames[Math.floor(Math.random() * usernames.length)];
+
                 // aiCommentが文字列の場合とオブジェクトの場合に対応
                 const commentText =
                   typeof aiComment === "string" ? aiComment : aiComment.comment;
@@ -209,7 +224,7 @@ const PostPage = () => {
                   id: `ai-${mainPostData.id}-${index}`,
                   content: commentText,
                   user: {
-                    username: "あい",
+                    username: randomUsername,
                     iconColor: randomColor,
                   },
                   timestamp: mainPostData.timestamp,

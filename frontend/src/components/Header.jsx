@@ -16,6 +16,8 @@ import PurpleIcon from "../assets/UserIcon_Purple.png";
 import RedIcon from "../assets/UserIcon_Red.png";
 import YellowIcon from "../assets/UserIcon_Yellow.png";
 
+import AchievementModal from "../components/AchievementModal"
+
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
   cream: { src: CreamIcon, alt: "Cream Icon" },
@@ -44,11 +46,12 @@ export const Header = () => {
       w="100%"
       bg="#FFFFFF"
     >
-      <Box flex="1">
+      <Box flex="1" display="flex" alignItems="center" gap={2}>
         <Link to="/profile">
-          <CircleIcon src={src} alt={alt} />
+        <CircleIcon src={src} alt={alt} />
         </Link>
-      </Box>
+        <AchievementModal />
+        </Box>
       <Box>
         <Link to="/list">
           <ImageButton img={AppIconNoText} alt="SNR Logo" />
