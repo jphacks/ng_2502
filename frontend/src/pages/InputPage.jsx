@@ -42,6 +42,7 @@ const iconMap = {
 
 const InputPage = () => {
   const [text, setText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { iconColor } = useUser();
   const { src, alt } = iconMap[iconColor] || iconMap.blue;
@@ -61,6 +62,9 @@ const InputPage = () => {
       console.warn("テキストが入力されていないか、ログインしていません。");
       return;
     }
+
+    // 送信中フラグを立てる（成功時はページ遷移するため解除は不要、失敗時はcatchで解除）
+    setIsSubmitting(true);
 
     try {
       const token = await user.getIdToken(); // ← ✅ tryの中に書く！
@@ -83,6 +87,8 @@ const InputPage = () => {
       // 投稿成功後、投稿一覧ページに移動
       navigate("/list");
     } catch (error) {
+      // 投稿失敗時は送信フラグを戻す
+      setIsSubmitting(false);
       console.error("🔥 投稿に失敗しました:", error);
       const status = error.response?.status;
       const detail = error.response?.data?.detail;
@@ -117,9 +123,9 @@ const InputPage = () => {
             colorScheme="orange"
             borderRadius="full"
             onClick={handleSubmit}
-            isDisabled={!text.trim()} // テキストが空かスペースのみの場合は無効
+            isDisabled={!text.trim() || isSubmitting} // テキストが空か送信中は無効
           >
-            とうこう
+            {isSubmitting ? "送信中..." : "とうこう"}
           </TextButton>
         </Flex>
 
