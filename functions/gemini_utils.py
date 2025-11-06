@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 import asyncio
+import re
 
 # .env読み込み
 load_dotenv()
@@ -275,6 +276,15 @@ async def generate_link_comments(text: str, num_comments: int = 2, link: str = N
     """
     投稿に対して、あおりコメントや誘導リンクを自動生成する関数。
     """
+
+    def url_to_link(comment: str) -> str:
+        # URLらしき部分をaタグに変換
+        return re.sub(
+            r'(https?://[^\s]+)',
+            r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
+            comment
+        )
+    
     comments = []
     # 1～num_comments件生成
     for i in range(num_comments):
@@ -294,8 +304,10 @@ async def generate_link_comments(text: str, num_comments: int = 2, link: str = N
         )
         try:
             response = await gemini_model.generate_content_async(prompt)
-            comments.append(response.text.strip())
+            comments.append(url_to_link(response.text.strip()))
         except Exception as e:
             comments.append(f"AI生成エラー: {e}")
     return comments
+
+
 

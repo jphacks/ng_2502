@@ -1,8 +1,8 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { VStack, Button, Text, Box } from "@chakra-ui/react";
+import { VStack, Button, Text, Box, useDisclosure } from "@chakra-ui/react";
 import { IoMdWarning } from "react-icons/io";
-
+import { AttentionModal } from "../components/AttentionModal";
 //カウントダウン
 const useCountDownInterval = (countTime, setCountTime) => {
   useEffect(() => {
@@ -23,8 +23,16 @@ const useCountDownInterval = (countTime, setCountTime) => {
 export { useCountDownInterval };
 
 const CenteredLayout = () => {
-  const [countTime, setCountTime] = useState(60);
+  const [countTime, setCountTime] = useState(10);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
   useCountDownInterval(countTime, setCountTime);
+  useEffect(() => {
+    if (countTime === 0) {
+      onOpen();
+    }
+  }, [countTime, onOpen]);
+
   return (
     <Box
       display="flex"
@@ -65,9 +73,11 @@ const CenteredLayout = () => {
           border={"none"}
           _focus={{ boxShadow: "none", outline: "none" }}
           borderRadius={5}
+          onClick={onOpen}
         >
           今すぐここをクリック！！！
         </Button>
+        <AttentionModal isOpen={isOpen} onClose={onClose} />
       </VStack>
     </Box>
   );
