@@ -71,7 +71,7 @@ export const Header = () => {
         />
         <Tutorial isOpen={isOpen} onClose={onClose} />
         <Link to="/input">
-          <TextButton>つくる</TextButton>
+          <TextButton mt="15px">つくる</TextButton>
         </Link>
       </Box>
     </Flex>
