@@ -20,6 +20,7 @@ import { useUser } from "../hooks/useUser";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; // axiosをインポート
 import { auth } from "../firebase"; // 認証情報を取得するため
+import { onAuthStateChanged } from "firebase/auth"; // 追加
 import { WhiteTextButton } from "../components/WhiteTextButton.jsx";
 
 // --- アイコンのインポートと対応表 ---
@@ -71,26 +72,31 @@ const ProfilePage = () => {
 
   // --- 変更点2: useEffectでプロフィール情報を取得 ---
   useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      const user = auth.currentUser;
+    // Firebase Authの初期化を待つ
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        console.log("❌ ユーザーが認証されていません");
         toast({
           title: "ログインが必要です",
           status: "error",
           duration: 3000,
           isClosable: true,
         });
-        navigate("/login"); // ログインページにリダイレクト
+        navigate("/login");
         return;
       }
 
+      console.log("✅ 認証済みユーザー:", user.uid);
+      setIsLoading(true);
+
       try {
         const idToken = await user.getIdToken();
+        console.log("🔑 IDトークン取得成功");
+        
         // バックエンドの GET /profile エンドポイントを呼び出す
         const response = await axios.get(`${API_URL}/profile`, {
           headers: {
-            Authorization: `Bearer ${idToken}`, // ヘッダーにトークンを設定
+            Authorization: `Bearer ${idToken}`,
           },
         });
 
@@ -101,21 +107,23 @@ const ProfilePage = () => {
         setMode(response.data.mode || "てんさく");
       } catch (error) {
         console.error("🔥 プロフィールの取得に失敗:", error);
+        console.error("エラー詳細:", error.response?.data);
         toast({
           title: "プロフィールの取得に失敗しました",
+          description: error.response?.data?.detail || error.message,
           status: "error",
           duration: 3000,
           isClosable: true,
         });
-        // エラーが起きても、Contextの値を初期値として表示は継続する
       } finally {
-        setIsLoading(false); // ローディング完了
+        setIsLoading(false);
       }
-    };
+    });
 
-    fetchProfile();
+    // クリーンアップ関数
+    return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 初回レンダリング時のみ実行
+  }, []);
 
   // --- 変更点3: handleSaveでAPIに送信する処理を実装 ---
   const handleSave = async () => {
