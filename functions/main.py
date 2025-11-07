@@ -387,6 +387,7 @@ ALL_ACHIEVEMENTS = {
     "fired_1",
     "like_total_100",
     "reply_total_20",
+    "positive_20",
 
 }
 
@@ -403,7 +404,7 @@ def update_achievements(user_id: str, post_count: int):
     if post_count >= 10:
         achievements.add("post_10")
 
-    if post_count >= 30:
+    if post_count >= 15:#あとで数字変える
         achievements.add("post_30")
 
 
@@ -414,6 +415,11 @@ def update_achievements(user_id: str, post_count: int):
     total_replies = count_total_predicted_replies(user_id)
     if total_replies >= 20:
         achievements.add("reply_total_20")
+
+    positive_posts = count_positive_posts(user_id)
+    if positive_posts >= 1:#あとで数字変える
+        achievements.add("positive_20")  # ← ここ！
+
 
     if ALL_ACHIEVEMENTS.issubset(achievements):
         achievements.add("all_achievements_unlocked")
@@ -442,7 +448,9 @@ def count_total_predicted_replies(user_id: str) -> int:
     docs = db.collection("posts").where("userId", "==", user_id).stream()
     return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
 
-
+def count_positive_posts(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).where("isPositive", "==", True).stream()
+    return sum(1 for _ in docs)
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):
