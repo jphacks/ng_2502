@@ -25,6 +25,8 @@ from gemini_utils import (
     predict_post_likes,
     predict_controversy,
     generate_controversial_comments,
+    predict_viral,
+    generate_viral_comments,
 )
 
 app = FastAPI()
@@ -173,12 +175,22 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         predict_controversy(payload.content),
     )
     
-    # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
+    # 2.5. バズり判定（ポジティブな投稿のみ対象、厳しい条件で約5%の確率）
+    is_viral = False
+    if is_positive and not is_controversial:
+        is_viral = await predict_viral(payload.content, is_positive)
+    
+    # 3. AIコメントを生成（炎上時・バズり時は特別なコメントを多めに生成）
     if is_controversial:
-        # 炎上時：通常コメント + 炎上コメント（合計で多め）
+        # 炎上時：通常コメント（positiveを除外） + 炎上コメント（合計で多め）
         controversial_comments = await generate_controversial_comments(payload.content, count=10)
-        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2])
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2], is_controversial=True)
         generated_comments = controversial_comments + normal_comments
+    elif is_viral:
+        # バズり時：バズり用ポジティブコメント + 通常コメント（合計で多め）
+        viral_comments = await generate_viral_comments(payload.content, count=15)
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:3])
+        generated_comments = viral_comments + normal_comments
     else:
         # 通常時：通常コメントのみ
         normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
@@ -197,6 +209,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "predictedReplyCount": reply_count,
         "predictedLikes": predicted_likes,
         "isControversial": is_controversial,  # 炎上フラグを追加
+        "isViral": is_viral,  # バズりフラグを追加
         "aiComments": generated_comments,
     }
     # ... (Firestore書き込み処理) ...
@@ -209,7 +222,6 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
-    await loop.run_in_executor(None, lambda: check_controversial_achievement(user_id, is_controversial))
     return {"message": "投稿完了", "postId": post_id}
 
 
@@ -366,6 +378,18 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     updated_profile = await loop.run_in_executor(None, write_user_profile)
     return {"message": "プロフィール更新成功", "profile": updated_profile}
 
+
+
+ALL_ACHIEVEMENTS = {
+    "post_10",
+    "post_30",
+    "fired_1",
+    "like_total_100",
+    "reply_total_20",
+    "positive_20",
+
+}
+
 def count_user_posts(user_id: str):
     docs = db.collection("posts").where("userId", "==", user_id).stream()
     return sum(1 for _ in docs)
@@ -377,24 +401,51 @@ def update_achievements(user_id: str, post_count: int):
     achievements = set(existing)  # 重複を避けるために set にする
 
     if post_count >= 10:
-        achievements.add("投稿10件達成")
-    if post_count >= 50:
-        achievements.add("投稿職人")
+        achievements.add("post_10")
+
+    if post_count >= 15:#あとで数字変える
+        achievements.add("post_30")
+
+
+    total_likes = count_total_predicted_likes(user_id)
+    if total_likes >= 100:
+        achievements.add("like_total_100")
+
+    total_replies = count_total_predicted_replies(user_id)
+    if total_replies >= 20:
+        achievements.add("reply_total_20")
+
+    positive_posts = count_positive_posts(user_id)
+    if positive_posts >= 1:#あとで数字変える
+        achievements.add("positive_20")  # ← ここ！
+    
+    controversial_posts = count_controversial_posts(user_id)
+    if controversial_posts >= 1:
+        achievements.add("fired_1")
+
+
+
+
+    if ALL_ACHIEVEMENTS.issubset(achievements):
+        achievements.add("all_achievements_unlocked")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
-def check_controversial_achievement(user_id: str, is_controversial: bool):
-    if not is_controversial:
-        return
+def count_controversial_posts(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).where("isControversial", "==", True).stream()
+    return sum(1 for _ in docs)
 
-    ach_ref = db.collection("achievements").document(user_id)
-    ach_doc = ach_ref.get()
-    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+def count_total_predicted_likes(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedLikes", 0) for doc in docs)
 
-    if "炎上経験者" not in unlocked:
-        ach_ref.set({
-            "unlocked": unlocked + ["炎上経験者"]
-        }, merge=True)
+def count_total_predicted_replies(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
+
+def count_positive_posts(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).where("isPositive", "==", True).stream()
+    return sum(1 for _ in docs)
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):

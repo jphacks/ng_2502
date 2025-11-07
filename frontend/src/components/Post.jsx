@@ -36,7 +36,12 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
+const Post = ({
+  post,
+  onCommentSubmit = () => {},
+  isComment = false,
+  isAiComment = false,
+}) => {
   const auth = getAuth();
   const currentUserId = auth.currentUser?.uid;
   const isOwnPost = post.userId === currentUserId;
@@ -90,7 +95,14 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
           </VStack>
         </HStack>
         <Box pl={{ base: "48px", md: "52px" }}>
-          <Text fontSize={{ base: "md", md: "lg" }}>{content}</Text>
+          {isAiComment ? (
+            <div
+              className="text-base md:text-lg"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
+          ) : (
+            <Text fontSize={{ base: "md", md: "lg" }}>{post.content}</Text>
+          )}
         </Box>
         <HStack justify="flex-end">
           <HStack spacing={1} align="center">
@@ -102,11 +114,18 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
                 ) : (
                   <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
                 )
-              } 
+              }
               onClick={handleLikeClick}
-           />
+            />
             {typeof post.predictedLikes === "number" && !isComment && (
-              <Text fontSize="25px" color="#80CBC4" lineHeight="1" fontFamily="monospace" minW="32px" textAlign="center">
+              <Text
+                fontSize="25px"
+                color="#80CBC4"
+                lineHeight="1"
+                fontFamily="monospace"
+                minW="32px"
+                textAlign="center"
+              >
                 {post.predictedLikes}
               </Text>
             )}

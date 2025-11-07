@@ -235,6 +235,7 @@ const PostPage = () => {
                     key={aiCommentPost.id}
                     post={aiCommentPost}
                     isComment={true}
+                    isAiComment={true}
                   />
                 );
               })}

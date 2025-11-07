@@ -9,6 +9,7 @@ import {
   Button,
   Wrap, // アイコンを自動で折り返して並べるためのコンポーネNト
   WrapItem,
+  SimpleGrid,
   Spinner,
   Center,
   Text,
@@ -20,8 +21,9 @@ import { auth } from "../firebase"; // 認証トークン取得のため
 import { AchievementIcon } from "./AchievementIcon"; // ステップ2で作成
 import { ACHIEVEMENTS_MASTER } from "../constants/achievementsMaster"; // ステップ1で作成
 
-// FastAPIサーバーのURL (ローカル環境)
-const API_URL = "http://localhost:8000";
+// 本番環境では VITE_API_URL を使い、
+// ローカル開発環境では（|| の右側） "http://localhost:8000" を使う
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 /**
  * 実績一覧をAPIから取得して表示するモーダルコンポーネント
@@ -63,7 +65,7 @@ export const AchievementModal = ({ isOpen, onClose }) => {
         const idToken = await user.getIdToken();
         
         // バックエンド(FastAPI)の /api/achievements/status APIを呼び出す
-        const response = await axios.get(`${API_URL}/api/achievements/status`, {
+        const response = await axios.get(`${API_URL}/achievements`, {
           headers: {
             Authorization: `Bearer ${idToken}` // 認証トークンをヘッダーに付けて送信
           }
@@ -128,21 +130,20 @@ export const AchievementModal = ({ isOpen, onClose }) => {
     }
     // 4c. 成功時（実績が0件の場合も含む）
     return (
-      <Wrap spacing={6} justify="center" p={4}>
+      <SimpleGrid columns={4} spacing={6} p={4} justifyItems="center">
         {allAchievements.length > 0 ? (
           allAchievements.map((ach) => (
-            <WrapItem key={ach.id}>
-              {/* ステップ2で作成したコンポーネントに、データを渡す */}
-              <AchievementIcon
-                achievement={ach}
-                isUnlocked={ach.isUnlocked}
-              />
-            </WrapItem>
+            
+            <AchievementIcon
+              key={ach.id}
+              achievement={ach}
+              isUnlocked={ach.isUnlocked}
+            />
           ))
         ) : (
           <Text color="gray.500">実績がまだありません。</Text>
         )}
-      </Wrap>
+      </SimpleGrid>
     );
   };
 
@@ -154,7 +155,7 @@ export const AchievementModal = ({ isOpen, onClose }) => {
         <ModalHeader>実績一覧</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          {/* 4. で作成したロジックをここで呼び出す */}
+          
           {renderBodyContent()}
         </ModalBody>
         <ModalFooter>

@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 import asyncio
+import re
+import random
 
 # .env読み込み
 load_dotenv()
@@ -84,9 +86,10 @@ async def predict_post_reactions(text: str) -> tuple[int, list[str]]:
         return 3, ["positive","neutral","neutral"]
 
 
-async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> list[str]:
+async def generate_reaction_comments_bulk(text: str, reactions: list[str], is_controversial: bool = False) -> list[str]:
     """
     軽量モデル向けに、1件ずつコメント生成してリストにまとめる。
+    炎上時（is_controversial=True）はpositiveタイプのコメントを生成しない。
     戻り値: ["コメント文", ...]
     """
     if not gemini_model:
@@ -94,6 +97,10 @@ async def generate_reaction_comments_bulk(text: str, reactions: list[str]) -> li
 
     comments: list[str] = []
     for r_type in reactions:
+        # 炎上時はpositiveコメントをスキップ
+        if is_controversial and r_type == "positive":
+            continue
+        
         # コメント生成
         comment_prompt = f"""
 あなたは小学生のSNSユーザーです。
@@ -171,6 +178,20 @@ async def predict_controversy(text: str) -> bool:
         return "YES" in result
     except Exception:
         return False
+
+
+async def predict_viral(text: str, is_positive: bool) -> bool:
+    """
+    ポジティブな投稿が「バズる」可能性があるかを判定する。
+    is_positiveがFalseの場合は必ずFalseを返す。
+    バズる確率は正確に5%（1/20）。
+    """
+    # ポジティブでない場合は必ずFalse
+    if not is_positive:
+        return False
+    
+    # 5%の確率でTrue（1/20）
+    return random.random() < 0.05
 
 
 async def generate_controversial_comments(text: str, count: int = 10) -> list[str]:
@@ -270,11 +291,114 @@ async def generate_controversial_comments(text: str, count: int = 10) -> list[st
     return comments
 
 
+
+async def generate_viral_comments(text: str, count: int = 15) -> list[str]:
+    """
+    バズり時のポジティブで盛り上がるコメントを生成する。
+    称賛、共感、拡散を促す内容を含める。
+    """
+    if not gemini_model:
+        return ["すごい！😍" for _ in range(count)]
+
+    comments: list[str] = []
+    
+    for i in range(count):
+        # コメントのバリエーションを作るためにインデックスを利用
+        if i < 5:
+            # 強い称賛・感動のコメント
+            comment_prompt = f"""
+あなたはバズっているSNS投稿にコメントをする人です。
+以下の投稿に対して、強く称賛したり感動を表すコメントを1件生成してください。
+
+投稿: "{text}"
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- 嬉しい・興奮の絵文字を使う（😍✨🎉💖🌟など）
+- 強い感動や称賛を表現
+- 小学生にも読める言葉で
+
+例: 「これめっちゃすごい！😍✨」
+"""
+        elif i < 10:
+            # 共感・賛同のコメント
+            comment_prompt = f"""
+あなたはバズっているSNS投稿にコメントをする人です。
+以下の投稿に対して、共感や賛同を示すコメントを1件生成してください。
+
+投稿: "{text}"
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- ポジティブな絵文字を使う（👍💯🙌😊など）
+- 共感や賛同を表現
+- 小学生にも読める言葉で
+
+例: 「わかる！ほんとそれ！👍」
+"""
+        else:
+            # 拡散・応援のコメント
+            comment_prompt = f"""
+あなたはバズっているSNS投稿にコメントをする人です。
+以下の投稿に対して、拡散や応援を促すコメントを1件生成してください。
+
+投稿: "{text}"
+
+ルール:
+- ひらがな・カタカナ・簡単な漢字のみ
+- 40文字以内
+- 応援の絵文字を使う（🔥💪🎊✨など）
+- 応援や拡散を促す内容
+- 小学生にも読める言葉で
+
+例: 「これみんなにおしえたい！🔥」
+"""
+        
+        try:
+            response = await gemini_model.generate_content_async(comment_prompt)
+            comment_text = response.text.strip()
+            # プロンプトの例文が含まれていたら除去
+            if "例:" in comment_text:
+                comment_text = comment_text.split("例:")[0].strip()
+        except Exception:
+            # エラー時のデフォルトコメント
+            if i < 5:
+                comment_text = "すごい！😍✨"
+            elif i < 10:
+                comment_text = "わかる！👍"
+            else:
+                comment_text = "これすき！🔥"
+        
+        comments.append(comment_text)
+    
+    return comments
+
+
+#XSS対策
+def sanitize_ai_output(text):
+    # <script>タグ削除
+    text = re.sub(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", text, flags=re.DOTALL)
+    # javascript:リンク削除
+    text = re.sub(r"javascript:", "", text, flags=re.IGNORECASE)
+    return text
+
 #あおりコメント作成関数
 async def generate_link_comments(text: str, num_comments: int = 2, link: str = None) -> list[str]:
     """
     投稿に対して、あおりコメントや誘導リンクを自動生成する関数。
     """
+
+    
+    def url_to_link(comment: str) -> str:
+        # URLらしき部分をaタグに変換
+        return re.sub(
+            r'(https?://[^\s]+)',
+            r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
+            comment
+        )
+    
     comments = []
     # 1～num_comments件生成
     for i in range(num_comments):
@@ -285,17 +409,20 @@ async def generate_link_comments(text: str, num_comments: int = 2, link: str = N
             ルール:
             - ひらがな・カタカナ・簡単な漢字のみ
             - 40文字以内
-            - 危険性を伝える内容
-            - 小学生にも読める言葉で"""
-            f"怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。"
-            f"『{link}』をクリックするとリンク先に遷移するようにしてください"
-            "あおりコメントとリンク付きコメントの割合は1:1くらいで。"
-            "出力するのはコメントだけで、余計な説明は不要です。"
+            - 小学生にも読める言葉で
+            -URL（{link}）が入る場合はMarkdownやHTMLにせず、プレーンテキストそのままを文章中に含めてください。
+            怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。
+            あおりコメントとリンク付きコメントの割合は1:1くらいで。
+            出力するのはコメント本文だけ。"""
         )
         try:
             response = await gemini_model.generate_content_async(prompt)
-            comments.append(response.text.strip())
+            safe_text = sanitize_ai_output(response.text.strip())
+            html_comment = url_to_link(safe_text)
+            comments.append(html_comment)
         except Exception as e:
             comments.append(f"AI生成エラー: {e}")
     return comments
+
+
 
