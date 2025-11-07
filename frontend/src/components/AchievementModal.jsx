@@ -64,7 +64,7 @@ export const AchievementModal = ({ isOpen, onClose }) => {
         const idToken = await user.getIdToken();
         
         // バックエンド(FastAPI)の /api/achievements/status APIを呼び出す
-        const response = await axios.get(`${API_URL}/api/achievements/status`, {
+        const response = await axios.get(`${API_URL}/achievements`, {
           headers: {
             Authorization: `Bearer ${idToken}` // 認証トークンをヘッダーに付けて送信
           }
