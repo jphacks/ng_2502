@@ -421,30 +421,19 @@ def update_achievements(user_id: str, post_count: int):
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
 # --- 実績変更点！！ ---
-# def を async def に変更
-async def check_controversial_achievement(user_id: str, is_controversial: bool):
-    if not is_controversial:
+def check_controversial_achievement(user_id: str, is_controversial: bool):
+	if not is_controversial:
         return
-
-    loop = asyncio.get_running_loop()
-
-    # 同期（ブロッキング）処理を
-    # 実行するための内部関数を定義
-    def _check_and_update_db():
-        ach_ref = db.collection("achievements").document(user_id)
-        ach_doc = ach_ref.get() # ← ブロッキング
-        unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
-
-        if "fired_1" not in unlocked:
-            # ↓ これもブロッキング
-            ach_ref.set({
-                "unlocked": unlocked + ["fired_1"]
-            }, merge=True)
-            return True # (更新したことがわかるように True を返す)
-        return False
-
-    # ブロッキング処理を別スレッドで実行する
-    await loop.run_in_executor(None, _check_and_update_db)
+	
+	ach_ref = db.collection("achievements").document(user_id)
+    ach_doc = ach_ref.get()
+    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+	
+	if "fired_1" not in unlocked:
+        ach_ref.set({
+            "unlocked": unlocked + ["fired_1"]
+        }, merge=True)
+	
 
 def count_total_predicted_likes(user_id: str) -> int:
     docs = db.collection("posts").where("userId", "==", user_id).stream()
