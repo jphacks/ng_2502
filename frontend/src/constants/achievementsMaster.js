@@ -29,9 +29,9 @@ export const ACHIEVEMENTS_MASTER = {
     "description": "投稿を10回行いました！",
     "icon": FaPlus // 値には、インポートしたアイコン部品そのものを入れます
   },
-  "post_100": {
-    "name": "投稿100件達成",
-    "description": "投稿を100回も行いました！すごい！",
+  "post_30": {
+    "name": "投稿30件達成",
+    "description": "投稿を30回も行いました！すごい！",
     "icon": FaSeedling
   },
 
@@ -41,11 +41,11 @@ export const ACHIEVEMENTS_MASTER = {
     "description": "不適切な投稿でAIに炎上させられました...",
     "icon": FaFire
   },
-  "peace_10": {
-    "name": "平和が一番",
-    "description": "炎上せずに10回連続で投稿しました！",
-    "icon": FaRegLightbulb // (例: 平和なひらめきアイコン)
-  },
+  // "peace_10": {
+  //   "name": "平和が一番",
+  //   "description": "炎上せずに10回連続で投稿しました！",
+  //   "icon": FaRegLightbulb // (例: 平和なひらめきアイコン)
+  // },
 
   // --- いいね ---
   "like_total_100": {
@@ -53,18 +53,31 @@ export const ACHIEVEMENTS_MASTER = {
     "description": "もらった「いいね」の合計が100を超えました！",
     "icon": FaHeart
   },
-  "like_once_80": {
-    "name": "バズった！",
-    "description": "1つの投稿で80以上のいいねをもらいました！",
-    "icon": FaCrown
-  },
+
+  "reply_total_20": {
+  name: "総リプライ20達成",
+  description: "もらったリプライの合計が20を超えました！",
+  icon: FaCommentDots // ← FaReplyでもOK、好みに応じて
+},
+  // "like_once_80": {
+  //   "name": "バズった！",
+  //   "description": "1つの投稿で80以上のいいねをもらいました！",
+  //   "icon": FaCrown
+  // },
+ 
+  "all_achievements_unlocked": {
+  name: "全実績解除",
+  description: "すべての称号を獲得しました！あなたは真の達成者です！",
+  icon: FaCrown // 👑 王冠アイコンで特別感を演出
+}
+
 
   // --- 予備 ---
   // もしバックエンドから、このリストにないIDが送られてきた場合に
   // 表示するための「？」アイコンも定義しておくと安全です。
-  "unknown": {
-    "name": "？？？",
-    "description": "未知の実績です",
-    "icon": FaQuestion
-  }
+  // "unknown": {
+  //   "name": "？？？",
+  //   "description": "未知の実績です",
+  //   "icon": FaQuestion
+  // }
 };
