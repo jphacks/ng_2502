@@ -366,6 +366,17 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     updated_profile = await loop.run_in_executor(None, write_user_profile)
     return {"message": "プロフィール更新成功", "profile": updated_profile}
 
+
+
+ALL_ACHIEVEMENTS = {
+    "投稿10件",
+    "投稿20件",
+    "炎上経験者",
+    "累計いいね100突破",
+    "累計リプ20突破",
+
+}
+
 def count_user_posts(user_id: str):
     docs = db.collection("posts").where("userId", "==", user_id).stream()
     return sum(1 for _ in docs)
@@ -377,9 +388,22 @@ def update_achievements(user_id: str, post_count: int):
     achievements = set(existing)  # 重複を避けるために set にする
 
     if post_count >= 10:
-        achievements.add("投稿10件達成")
-    if post_count >= 50:
-        achievements.add("投稿職人")
+        achievements.add("投稿10件")
+
+    if post_count >= 20:
+        achievements.add("投稿20件")
+
+
+    total_likes = count_total_predicted_likes(user_id)
+    if total_likes >= 100:
+    achievements.add("累計いいね100突破")
+
+    total_replies = count_total_predicted_replies(user_id)
+    if total_replies >= 20:
+    achievements.add("累計リプ20突破")
+
+    if ALL_ACHIEVEMENTS.issubset(achievements):
+    achievements.add("全実績解除")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
@@ -395,6 +419,16 @@ def check_controversial_achievement(user_id: str, is_controversial: bool):
         ach_ref.set({
             "unlocked": unlocked + ["炎上経験者"]
         }, merge=True)
+
+def count_total_predicted_likes(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedLikes", 0) for doc in docs)
+
+def count_total_predicted_replies(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
+
+
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):
