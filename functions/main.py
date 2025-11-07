@@ -25,6 +25,8 @@ from gemini_utils import (
     predict_post_likes,
     predict_controversy,
     generate_controversial_comments,
+    predict_viral,
+    generate_viral_comments,
 )
 
 app = FastAPI()
@@ -173,12 +175,22 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         predict_controversy(payload.content),
     )
     
-    # 3. AIコメントを生成（炎上時は炎上用コメントを多めに生成）
+    # 2.5. バズり判定（ポジティブな投稿のみ対象、厳しい条件で約5%の確率）
+    is_viral = False
+    if is_positive and not is_controversial:
+        is_viral = await predict_viral(payload.content, is_positive)
+    
+    # 3. AIコメントを生成（炎上時・バズり時は特別なコメントを多めに生成）
     if is_controversial:
-        # 炎上時：通常コメント + 炎上コメント（合計で多め）
+        # 炎上時：通常コメント（positiveを除外） + 炎上コメント（合計で多め）
         controversial_comments = await generate_controversial_comments(payload.content, count=10)
-        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2])
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2], is_controversial=True)
         generated_comments = controversial_comments + normal_comments
+    elif is_viral:
+        # バズり時：バズり用ポジティブコメント + 通常コメント（合計で多め）
+        viral_comments = await generate_viral_comments(payload.content, count=15)
+        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:3])
+        generated_comments = viral_comments + normal_comments
     else:
         # 通常時：通常コメントのみ
         normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
@@ -197,6 +209,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "predictedReplyCount": reply_count,
         "predictedLikes": predicted_likes,
         "isControversial": is_controversial,  # 炎上フラグを追加
+        "isViral": is_viral,  # バズりフラグを追加
         "aiComments": generated_comments,
     }
     # ... (Firestore書き込み処理) ...
