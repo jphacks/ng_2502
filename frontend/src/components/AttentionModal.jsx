@@ -26,7 +26,7 @@ export const AttentionModal = ({ isOpen, onClose, onCommentSubmit }) => {
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>タイトル</ModalHeader>
+        <ModalHeader>気を付けてね</ModalHeader>
         <ModalCloseButton
           _focus={{ boxShadow: "none", outline: "none" }}
           border={"none"}
