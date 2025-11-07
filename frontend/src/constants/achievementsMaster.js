@@ -57,7 +57,7 @@ export const ACHIEVEMENTS_MASTER = {
   "reply_total_20": {
   name: "総リプライ20達成",
   description: "もらったリプライの合計が20を超えました！",
-  icon: FaCommentDots // ← FaReplyでもOK、好みに応じて
+  icon: FaHeart // ← FaReplyでもOK、好みに応じて
 },
   // "like_once_80": {
   //   "name": "バズった！",
