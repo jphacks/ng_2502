@@ -222,7 +222,6 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
-    await loop.run_in_executor(None, lambda: check_controversial_achievement(user_id, is_controversial))
     return {"message": "投稿完了", "postId": post_id}
 
 
@@ -419,6 +418,12 @@ def update_achievements(user_id: str, post_count: int):
     positive_posts = count_positive_posts(user_id)
     if positive_posts >= 1:#あとで数字変える
         achievements.add("positive_20")  # ← ここ！
+    
+    controversial_posts = count_controversial_posts(user_id)
+    if controversial_posts >= 1:
+        achievements.add("fired_1")
+
+
 
 
     if ALL_ACHIEVEMENTS.issubset(achievements):
@@ -426,19 +431,9 @@ def update_achievements(user_id: str, post_count: int):
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
-# --- 実績変更点！！ ---
-def check_controversial_achievement(user_id: str, is_controversial: bool):
-    if not is_controversial:
-        return
-
-    ach_ref = db.collection("achievements").document(user_id)
-    ach_doc = ach_ref.get()
-    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
-
-    if "fired_1" not in unlocked:
-        ach_ref.set({
-            "unlocked": unlocked + ["fired_1"]
-        }, merge=True)
+def count_controversial_posts(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).where("isControversial", "==", True).stream()
+    return sum(1 for _ in docs)
 
 def count_total_predicted_likes(user_id: str) -> int:
     docs = db.collection("posts").where("userId", "==", user_id).stream()
