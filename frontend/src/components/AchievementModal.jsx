@@ -5,14 +5,12 @@ import {
   ModalHeader,
   ModalFooter,
   ModalBody,
-  ModalCloseButton,
   Button,
-  Wrap, // アイコンを自動で折り返して並べるためのコンポーネNト
-  WrapItem,
   SimpleGrid,
   Spinner,
   Center,
   Text,
+  Flex,
   useToast // エラー通知用
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
@@ -130,7 +128,7 @@ export const AchievementModal = ({ isOpen, onClose }) => {
     }
     // 4c. 成功時（実績が0件の場合も含む）
     return (
-      <SimpleGrid columns={4} spacing={6} p={4} justifyItems="center">
+      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} p={4} justifyItems="center">
         {allAchievements.length > 0 ? (
           allAchievements.map((ach) => (
             
@@ -152,15 +150,40 @@ export const AchievementModal = ({ isOpen, onClose }) => {
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
       <ModalOverlay />
       <ModalContent borderRadius="2xl" mx={4}>
-        <ModalHeader>実績一覧</ModalHeader>
-        <ModalCloseButton />
+        <ModalHeader>
+          <Flex justify="space-between" align="center">
+            {/* Chakra UIの<ModalHeader>はデフォルトで 
+              fontSize="xl" fontWeight="semibold" が当たるため、
+              <Text>コンポーネントでスタイルを継承しつつ、
+              ボタンと横並びにする
+            */}
+            <Text as="span" fontSize="inherit" fontWeight="inherit">
+              あつめたバッジ
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              borderWidth="2px"
+              color="#FFB433"
+              borderColor="#FFB433"
+              _hover={{ color: "orange.400", borderColor: "orange.400" }}
+              onClick={onClose}
+              _focus={{
+                boxShadow: "none", // Chakra UIの影を消す
+                outline: "none"    // ブラウザの枠線も消す
+              }}
+              _focusVisible={{
+                boxShadow: "none", // Tabキー選択時の影も消す
+                outline: "none"    // Tabキー選択時の枠線も消す
+              }}
+            >
+              とじる
+            </Button>
+          </Flex>
+        </ModalHeader>
         <ModalBody>
-          
           {renderBodyContent()}
         </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" onClick={onClose}>とじる</Button>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );

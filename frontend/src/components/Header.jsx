@@ -69,9 +69,24 @@
             aria-label="実績一覧"
             icon={<FaTrophy />}
             onClick={onAchievementOpen} // ★クリックで実績モーダルを開く
-            variant="ghost"
-            color="gray.600"
-            _hover={{ color: "orange.400" }}
+            variant="outline"
+            borderWidth={{ base: "2px", md: "4px" }}
+            width={{ base: "28px", md: "40px" }}
+            height={{ base: "28px", md: "40px" }}
+            minWidth={{ base: "28px", md: "40px" }}
+            borderRadius="full"
+            fontSize={{ base: "16px", md: "20px" }}
+            color="#FFB433"
+            borderColor="#FFB433"
+            _hover={{ color: "orange.400", borderColor: "orange.400" }}
+            _focus={{
+              boxShadow: "none", // Chakra UIの影を消す
+              outline: "none"    // ブラウザの枠線も消す
+            }}
+            _focusVisible={{
+              boxShadow: "none", // Tabキー選択時の影も消す
+              outline: "none"    // Tabキー選択時の枠線も消す
+            }}
           />
           {/* (AchievementModalの呼び出しは、競合を避けるためFlexの最後に移動) */}
         </Box>
