@@ -67,18 +67,28 @@ const LoginPage = () => {
       console.log("✅ Firebase Auth 登録成功:", userCredential.user.uid);
 
       // IDトークンを取得
+      console.log("🔑 IDトークン取得中...");
       const idToken = await userCredential.user.getIdToken();
+      console.log("🔑 IDトークン取得成功");
+      
+      console.log("💾 IDトークン保存中...");
       localStorage.setItem("firebaseIdToken", idToken);
       console.log("💾 IDトークン保存完了");
       
       console.log("🆕 新規登録成功:", userCredential.user.email);
+      
+      // Firebase Authの初期化を待つ
+      console.log("⏳ 認証の初期化を待機中...");
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待つ
+      
       console.log("🚀 /profile へ遷移します");
 
       navigate("/profile");
     } catch (error) {
       console.error("❌ 新規登録エラー:", error);
-      console.error("エラーコード:", error.code);
-      console.error("エラーメッセージ:", error.message);
+      console.error("❌ エラーコード:", error.code);
+      console.error("❌ エラーメッセージ:", error.message);
+      console.error("❌ エラースタック:", error.stack);
       
       // エラーメッセージを日本語化
       let errorMessage = "新規登録に失敗しました";
