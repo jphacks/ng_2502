@@ -9,6 +9,7 @@ import {
   FaRegLightbulb, // (例: FaUserEditの代わりに)
   FaPlus,
   FaSeedling,
+  FaStar,
   FaQuestion // 予備の「？」アイコン
 } from "react-icons/fa";
 
@@ -22,8 +23,20 @@ import {
 export const ACHIEVEMENTS_MASTER = {
   // キーの名前 (例: "post_10") は、必ずバックエンド（main.py）で
   // 定義されている実績IDと *完全に* 一致させてください。
+  "welcome_snr": {
+    "name": "SNRをはじめた",
+    "description": "SNRのアカウントを作成しました！ここからがスタートです！",
+    "icon": FaStar // ← インポートしたアイコンを指定
+  },
+  
+  "positive_20": {
+    "name": "ポジティブ投稿20件達成",
+    "description": "ポジティブな内容の投稿を20回行いました！",
+    "icon": FaRegLightbulb
+  },
 
   // --- 投稿数 ---
+  
   "post_10": {
     "name": "投稿10件達成",
     "description": "投稿を10回行いました！",

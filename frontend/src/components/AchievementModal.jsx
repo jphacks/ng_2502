@@ -100,7 +100,7 @@ export const AchievementModal = ({ isOpen, onClose }) => {
     // マスターリストから実績情報を取得
     const achievementData = ACHIEVEMENTS_MASTER[id];
     // APIから取得したリストにIDが含まれているかチェック
-    const isUnlocked = unlockedIds.includes(id);
+    const isUnlocked = unlockedIds.includes(id) || id === "welcome_snr";
 
     // 画面表示用の完全なオブジェクトを作成して返す
     return {
