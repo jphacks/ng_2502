@@ -9,6 +9,7 @@ import {
   Button,
   Wrap, // アイコンを自動で折り返して並べるためのコンポーネNト
   WrapItem,
+  SimpleGrid,
   Spinner,
   Center,
   Text,
@@ -129,21 +130,20 @@ export const AchievementModal = ({ isOpen, onClose }) => {
     }
     // 4c. 成功時（実績が0件の場合も含む）
     return (
-      <Wrap spacing={6} justify="center" p={4}>
+      <SimpleGrid columns={4} spacing={6} p={4} justifyItems="center">
         {allAchievements.length > 0 ? (
           allAchievements.map((ach) => (
-            <WrapItem key={ach.id}>
-              {/* ステップ2で作成したコンポーネントに、データを渡す */}
-              <AchievementIcon
-                achievement={ach}
-                isUnlocked={ach.isUnlocked}
-              />
-            </WrapItem>
+            {/* ステップ2で作成したコンポーネントに、データを渡す */}
+            <AchievementIcon
+              key={ach.id}
+              achievement={ach}
+              isUnlocked={ach.isUnlocked}
+            />
           ))
         ) : (
           <Text color="gray.500">実績がまだありません。</Text>
         )}
-      </Wrap>
+      </SimpleGrid>
     );
   };
 
