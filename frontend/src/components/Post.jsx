@@ -90,7 +90,14 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
           </VStack>
         </HStack>
         <Box pl={{ base: "48px", md: "52px" }}>
-          <Text fontSize={{ base: "md", md: "lg" }}>{content}</Text>
+          {isAiComment ? (
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
+          ) : (
+            <Text fontSize={{ base: "md", md: "lg" }}>{post.content}</Text>
+          )}
         </Box>
         <HStack justify="flex-end">
           <HStack spacing={1} align="center">
@@ -102,11 +109,18 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
                 ) : (
                   <FaRegHeart fontSize={{ base: "16px", md: "20px" }} />
                 )
-              } 
+              }
               onClick={handleLikeClick}
-           />
+            />
             {typeof post.predictedLikes === "number" && !isComment && (
-              <Text fontSize="25px" color="#80CBC4" lineHeight="1" fontFamily="monospace" minW="32px" textAlign="center">
+              <Text
+                fontSize="25px"
+                color="#80CBC4"
+                lineHeight="1"
+                fontFamily="monospace"
+                minW="32px"
+                textAlign="center"
+              >
                 {post.predictedLikes}
               </Text>
             )}
