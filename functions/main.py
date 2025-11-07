@@ -366,6 +366,17 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     updated_profile = await loop.run_in_executor(None, write_user_profile)
     return {"message": "プロフィール更新成功", "profile": updated_profile}
 
+
+
+ALL_ACHIEVEMENTS = {
+    "post_10",
+    "post_30",
+    "fired_1",
+    "like_total_100",
+    "reply_total_20",
+
+}
+
 def count_user_posts(user_id: str):
     docs = db.collection("posts").where("userId", "==", user_id).stream()
     return sum(1 for _ in docs)
@@ -377,24 +388,60 @@ def update_achievements(user_id: str, post_count: int):
     achievements = set(existing)  # 重複を避けるために set にする
 
     if post_count >= 10:
-        achievements.add("投稿10件達成")
-    if post_count >= 50:
-        achievements.add("投稿職人")
+        achievements.add("post_10")
+
+    if post_count >= 30:
+        achievements.add("post_30")
+
+
+    total_likes = count_total_predicted_likes(user_id)
+    if total_likes >= 100:
+        achievements.add("like_total_100")
+
+    total_replies = count_total_predicted_replies(user_id)
+    if total_replies >= 20:
+        achievements.add("reply_total_20")
+
+    if ALL_ACHIEVEMENTS.issubset(achievements):
+        achievements.add("all_achievements_unlocked")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
-def check_controversial_achievement(user_id: str, is_controversial: bool):
+# --- 実績変更点！！ ---
+# def を async def に変更
+async def check_controversial_achievement(user_id: str, is_controversial: bool):
     if not is_controversial:
         return
 
-    ach_ref = db.collection("achievements").document(user_id)
-    ach_doc = ach_ref.get()
-    unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+    loop = asyncio.get_running_loop()
 
-    if "炎上経験者" not in unlocked:
-        ach_ref.set({
-            "unlocked": unlocked + ["炎上経験者"]
-        }, merge=True)
+    # 同期（ブロッキング）処理を
+    # 実行するための内部関数を定義
+    def _check_and_update_db():
+        ach_ref = db.collection("achievements").document(user_id)
+        ach_doc = ach_ref.get() # ← ブロッキング
+        unlocked = ach_doc.to_dict().get("unlocked", []) if ach_doc.exists else []
+
+        if "fired_1" not in unlocked:
+            # ↓ これもブロッキング
+            ach_ref.set({
+                "unlocked": unlocked + ["fired_1"]
+            }, merge=True)
+            return True # (更新したことがわかるように True を返す)
+        return False
+
+    # ブロッキング処理を別スレッドで実行する
+    await loop.run_in_executor(None, _check_and_update_db)
+
+def count_total_predicted_likes(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedLikes", 0) for doc in docs)
+
+def count_total_predicted_replies(user_id: str) -> int:
+    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
+
+
 
 @app.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):
