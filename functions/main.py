@@ -369,11 +369,11 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
 
 
 ALL_ACHIEVEMENTS = {
-    "投稿10件",
-    "投稿20件",
-    "炎上経験者",
-    "累計いいね100突破",
-    "累計リプ20突破",
+    "post_10",
+    "post_30",
+    "fired_1",
+    "like_total_100",
+    "reply_total_20",
 
 }
 
@@ -388,22 +388,22 @@ def update_achievements(user_id: str, post_count: int):
     achievements = set(existing)  # 重複を避けるために set にする
 
     if post_count >= 10:
-        achievements.add("投稿10件")
+        achievements.add("post_10")
 
-    if post_count >= 20:
-        achievements.add("投稿20件")
+    if post_count >= 30:
+        achievements.add("post_30")
 
 
     total_likes = count_total_predicted_likes(user_id)
     if total_likes >= 100:
-    achievements.add("累計いいね100突破")
+        achievements.add("like_total_100")
 
     total_replies = count_total_predicted_replies(user_id)
     if total_replies >= 20:
-    achievements.add("累計リプ20突破")
+        achievements.add("reply_total_20")
 
     if ALL_ACHIEVEMENTS.issubset(achievements):
-    achievements.add("全実績解除")
+        achievements.add("all_achievements_unlocked")
 
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
