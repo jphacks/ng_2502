@@ -36,7 +36,12 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
+const Post = ({
+  post,
+  onCommentSubmit = () => {},
+  isComment = false,
+  isAiComment = false,
+}) => {
   const auth = getAuth();
   const currentUserId = auth.currentUser?.uid;
   const isOwnPost = post.userId === currentUserId;
@@ -91,8 +96,8 @@ const Post = ({ post, onCommentSubmit = () => {}, isComment = false }) => {
         </HStack>
         <Box pl={{ base: "48px", md: "52px" }}>
           {isAiComment ? (
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
+            <div
+              className="text-base md:text-lg"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
           ) : (
