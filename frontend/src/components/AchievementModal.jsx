@@ -20,8 +20,9 @@ import { auth } from "../firebase"; // 認証トークン取得のため
 import { AchievementIcon } from "./AchievementIcon"; // ステップ2で作成
 import { ACHIEVEMENTS_MASTER } from "../constants/achievementsMaster"; // ステップ1で作成
 
-// FastAPIサーバーのURL (ローカル環境)
-const API_URL = "http://localhost:8000";
+// 本番環境では VITE_API_URL を使い、
+// ローカル開発環境では（|| の右側） "http://localhost:8000" を使う
+const API_URL = "https://ng-2502testesu.onrender.com";
 
 /**
  * 実績一覧をAPIから取得して表示するモーダルコンポーネント
