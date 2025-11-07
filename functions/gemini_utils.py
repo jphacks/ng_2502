@@ -291,6 +291,7 @@ async def generate_controversial_comments(text: str, count: int = 10) -> list[st
     return comments
 
 
+
 async def generate_viral_comments(text: str, count: int = 15) -> list[str]:
     """
     バズり時のポジティブで盛り上がるコメントを生成する。
@@ -375,12 +376,21 @@ async def generate_viral_comments(text: str, count: int = 15) -> list[str]:
     return comments
 
 
+#XSS対策
+def sanitize_ai_output(text):
+    # <script>タグ削除
+    text = re.sub(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", text, flags=re.DOTALL)
+    # javascript:リンク削除
+    text = re.sub(r"javascript:", "", text, flags=re.IGNORECASE)
+    return text
+
 #あおりコメント作成関数
 async def generate_link_comments(text: str, num_comments: int = 2, link: str = None) -> list[str]:
     """
     投稿に対して、あおりコメントや誘導リンクを自動生成する関数。
     """
 
+    
     def url_to_link(comment: str) -> str:
         # URLらしき部分をaタグに変換
         return re.sub(
@@ -399,16 +409,17 @@ async def generate_link_comments(text: str, num_comments: int = 2, link: str = N
             ルール:
             - ひらがな・カタカナ・簡単な漢字のみ
             - 40文字以内
-            - 危険性を伝える内容
-            - 小学生にも読める言葉で"""
-            f"怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。"
-            f"『{link}』をクリックするとリンク先に遷移するようにしてください"
-            "あおりコメントとリンク付きコメントの割合は1:1くらいで。"
-            "出力するのはコメントだけで、余計な説明は不要です。"
+            - 小学生にも読める言葉で
+            -URL（{link}）が入る場合はMarkdownやHTMLにせず、プレーンテキストそのままを文章中に含めてください。
+            怪しいリンク付きコメントの場合は、必ずこのURL『{link}』を文中に自然に含めてください。
+            あおりコメントとリンク付きコメントの割合は1:1くらいで。
+            出力するのはコメント本文だけ。"""
         )
         try:
             response = await gemini_model.generate_content_async(prompt)
-            comments.append(url_to_link(response.text.strip()))
+            safe_text = sanitize_ai_output(response.text.strip())
+            html_comment = url_to_link(safe_text)
+            comments.append(html_comment)
         except Exception as e:
             comments.append(f"AI生成エラー: {e}")
     return comments
