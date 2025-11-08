@@ -403,7 +403,7 @@ def update_achievements(user_id: str, post_count: int):
     if post_count >= 10:
         achievements.add("post_10")
 
-    if post_count >= 15:#あとで数字変える
+    if post_count >= 30#あとで数字変える
         achievements.add("post_30")
 
 
@@ -416,7 +416,7 @@ def update_achievements(user_id: str, post_count: int):
         achievements.add("reply_total_20")
 
     positive_posts = count_positive_posts(user_id)
-    if positive_posts >= 1:#あとで数字変える
+    if positive_posts >= 20:#あとで数字変える
         achievements.add("positive_20")  # ← ここ！
     
     controversial_posts = count_controversial_posts(user_id)
