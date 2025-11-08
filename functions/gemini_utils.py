@@ -22,35 +22,17 @@ except Exception as e:
 
 # --- 関数定義 ---
 
-async def validate_post_safety(text: str) -> tuple[bool, str]:
-    if not gemini_model:
-        return False, "AIモデルが初期化されていません。"
-
-    prompt = f"""
-あなたは小学生向けSNSの安全性チェックAIです。
-以下の投稿に、いじめ、暴力、個人情報、その他子供に不適切な内容が含まれているか判定してください。
-問題がなければ「OK」、問題があれば「NG 理由」の形式で答えてください。理由はひらがな、カタカナのみで、簡単な言葉で説明してください。
-
-投稿: "{text}"
-"""
-    try:
-        response = await gemini_model.generate_content_async(prompt)
-        result_text = response.text.strip()
-        if result_text.startswith("OK"):
-            return True, ""
-        else:
-            reason = result_text.replace("NG", "").strip()
-            return False, reason if reason else "不適切な内容が含まれています。"
-    except Exception as e:
-        return False, f"エラー: {e}"
-
-
-async def analyze_post_comprehensive(text: str) -> dict:
+async def validate_and_analyze_post(text: str, require_safety_check: bool = True) -> dict:
     """
-    投稿の包括的分析を1回のAPI呼び出しで実行。
-    ポジティブ判定、反応予測、いいね予測、炎上判定を統合。
+    投稿の安全性チェックと包括的分析を1回のAPI呼び出しで実行。
+    
+    Args:
+        text: 投稿内容
+        require_safety_check: True=てんさいモード（安全チェック必要）、False=じゆうモード（分析のみ）
     
     戻り値: {
+        "is_safe": bool,
+        "safety_reason": str,
         "is_positive": bool,
         "reply_count": int,
         "reaction_types": list[str],
@@ -60,6 +42,8 @@ async def analyze_post_comprehensive(text: str) -> dict:
     """
     if not gemini_model:
         return {
+            "is_safe": False,
+            "safety_reason": "AIモデルが初期化されていません。",
             "is_positive": False,
             "reply_count": 3,
             "reaction_types": ["positive", "neutral", "neutral"],
@@ -67,7 +51,53 @@ async def analyze_post_comprehensive(text: str) -> dict:
             "is_controversial": False
         }
 
-    prompt = f"""
+    if require_safety_check:
+        # てんさいモード：安全性チェック + 包括的分析
+        prompt = f"""
+あなたは小学生向けSNSの分析AIです。以下の投稿を分析し、JSON形式で結果を返してください。
+
+投稿: "{text}"
+
+まず安全性をチェックし、その後に詳細分析を行ってください。
+
+【安全性チェック】
+以下の内容が含まれているか判定:
+- いじめ、暴力的な表現
+- 個人情報（名前、住所、電話番号、学校名など）
+- その他子供に不適切な内容
+
+【詳細分析（安全な場合のみ）】
+1. is_positive: この投稿は読んだ人を明るい気持ちにしますか？ (true/false)
+2. reply_count: コメントが何件付くと予測されますか？ (3〜10の整数)
+3. reaction_types: コメントのタイプをカンマ区切りで予測
+   - タイプは positive / negative / neutral のいずれか
+   - reply_countと同じ数だけ生成
+4. predicted_likes: 「いいね」が何件つくと予測されますか？ (0〜100の整数)
+5. is_controversial: この投稿が炎上するリスクがありますか？ (true/false)
+   判定基準:
+   - 個人情報が含まれている
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見
+   - センシティブなトピック（政治、宗教、人種など）
+   - 誤解を招きやすい誇張表現
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "reply_count": 5,
+  "reaction_types": "positive, neutral, positive, neutral, positive",
+  "predicted_likes": 25,
+  "is_controversial": false
+}}
+
+※ is_safe が false の場合、safety_reason にひらがな・カタカナのみで簡単な言葉で理由を書いてください。
+※ is_safe が false の場合、他の項目はデフォルト値でOKです。
+"""
+    else:
+        # じゆうモード：安全性チェックなし、分析のみ
+        prompt = f"""
 あなたはSNS分析AIです。以下の投稿を分析し、JSON形式で結果を返してください。
 
 投稿: "{text}"
@@ -75,16 +105,12 @@ async def analyze_post_comprehensive(text: str) -> dict:
 以下の項目を分析してください：
 
 1. is_positive: この投稿は読んだ人を明るい気持ちにしますか？ (true/false)
-
 2. reply_count: コメントが何件付くと予測されますか？ (3〜10の整数)
-
 3. reaction_types: コメントのタイプをカンマ区切りで予測してください。
    - タイプは positive / negative / neutral のいずれか
    - reply_countと同じ数だけ生成
    - 例: "positive, neutral, positive"
-
 4. predicted_likes: 「いいね」が何件つくと予測されますか？ (0〜100の整数)
-
 5. is_controversial: この投稿が炎上するリスクがありますか？ (true/false)
    炎上リスクの判定基準:
    - 個人情報（名前、住所、電話番号、学校名など）が含まれている
@@ -95,6 +121,8 @@ async def analyze_post_comprehensive(text: str) -> dict:
 
 出力形式（JSONのみ、他の文章は不要）:
 {{
+  "is_safe": true,
+  "safety_reason": "",
   "is_positive": true,
   "reply_count": 5,
   "reaction_types": "positive, neutral, positive, neutral, positive",
@@ -116,6 +144,22 @@ async def analyze_post_comprehensive(text: str) -> dict:
         # JSONをパース
         data = json.loads(result_text)
         
+        # 安全性チェックの結果を取得
+        is_safe = data.get("is_safe", True if not require_safety_check else False)
+        safety_reason = data.get("safety_reason", "")
+        
+        # 安全でない場合はデフォルト値を返す
+        if require_safety_check and not is_safe:
+            return {
+                "is_safe": False,
+                "safety_reason": safety_reason if safety_reason else "不適切な内容が含まれています。",
+                "is_positive": False,
+                "reply_count": 3,
+                "reaction_types": ["neutral", "neutral", "neutral"],
+                "predicted_likes": 0,
+                "is_controversial": True  # 安全でない投稿は炎上扱い
+            }
+        
         # reaction_typesを文字列からリストに変換
         reaction_types_str = data.get("reaction_types", "positive, neutral, neutral")
         reaction_types = [t.strip() for t in reaction_types_str.split(",") if t.strip() in ["positive", "neutral", "negative"]]
@@ -133,6 +177,8 @@ async def analyze_post_comprehensive(text: str) -> dict:
                 reaction_types = reaction_types[:reply_count]
         
         return {
+            "is_safe": is_safe,
+            "safety_reason": safety_reason,
             "is_positive": data.get("is_positive", False),
             "reply_count": reply_count,
             "reaction_types": reaction_types,
@@ -141,36 +187,47 @@ async def analyze_post_comprehensive(text: str) -> dict:
         }
         
     except Exception as e:
-        print(f"包括的分析エラー: {e}")
-        # デフォルト値を返す
-        return {
-            "is_positive": False,
-            "reply_count": 3,
-            "reaction_types": ["positive", "neutral", "neutral"],
-            "predicted_likes": 3,
-            "is_controversial": False
-        }
+        print(f"統合分析エラー: {e}")
+        # エラー時のデフォルト値
+        if require_safety_check:
+            return {
+                "is_safe": False,
+                "safety_reason": f"エラー: {e}",
+                "is_positive": False,
+                "reply_count": 3,
+                "reaction_types": ["neutral", "neutral", "neutral"],
+                "predicted_likes": 0,
+                "is_controversial": False
+            }
+        else:
+            return {
+                "is_safe": True,
+                "safety_reason": "",
+                "is_positive": False,
+                "reply_count": 3,
+                "reaction_types": ["positive", "neutral", "neutral"],
+                "predicted_likes": 3,
+                "is_controversial": False
+            }
 
 
-# 後方互換性のための個別関数（内部では統合版を使用）
-async def judge_post_positivity(text: str) -> bool:
-    result = await analyze_post_comprehensive(text)
-    return result["is_positive"]
+# 後方互換性のための個別関数（非推奨、統合版を使用すること）
+async def validate_post_safety(text: str) -> tuple[bool, str]:
+    """後方互換性のための関数。新規コードでは validate_and_analyze_post を使用してください。"""
+    result = await validate_and_analyze_post(text, require_safety_check=True)
+    return result["is_safe"], result["safety_reason"]
 
 
-async def predict_post_reactions(text: str) -> tuple[int, list[str]]:
-    result = await analyze_post_comprehensive(text)
-    return result["reply_count"], result["reaction_types"]
-
-
-async def predict_post_likes(text: str) -> int:
-    result = await analyze_post_comprehensive(text)
-    return result["predicted_likes"]
-
-
-async def predict_controversy(text: str) -> bool:
-    result = await analyze_post_comprehensive(text)
-    return result["is_controversial"]
+async def analyze_post_comprehensive(text: str) -> dict:
+    """後方互換性のための関数。新規コードでは validate_and_analyze_post を使用してください。"""
+    result = await validate_and_analyze_post(text, require_safety_check=False)
+    return {
+        "is_positive": result["is_positive"],
+        "reply_count": result["reply_count"],
+        "reaction_types": result["reaction_types"],
+        "predicted_likes": result["predicted_likes"],
+        "is_controversial": result["is_controversial"]
+    }
 
 
 async def predict_viral(text: str, is_positive: bool) -> bool:

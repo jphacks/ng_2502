@@ -18,13 +18,12 @@ from firebase_admin import firestore as admin_firestore
 
 # gemini_utils.pyからAI関数をインポート
 from gemini_utils import (
-    validate_post_safety,
-    analyze_post_comprehensive,  # 統合版を使用
-    generate_reaction_comments_bulk,
-    generate_link_comments,
+    validate_and_analyze_post,  # 統合版の新関数
     predict_viral,
     generate_controversial_comments,
     generate_viral_comments,
+    gemini_model,
+    sanitize_ai_output,
 )
 
 app = FastAPI()
@@ -61,7 +60,6 @@ except FileNotFoundError:
 # credが見つかった場合のみFirebase Adminを初期化
 if cred:
     try:
-
         firebase_admin.initialize_app(cred)
     except ValueError as e:
         # すでに初期化されている場合は無視
@@ -108,7 +106,6 @@ async def get_current_user(cred: HTTPAuthorizationCredentials = Depends(bearer_s
 
 # --- Pydanticモデルの定義 ---
 class PostCreate(BaseModel):
-    #userId: str # フロントからは送るが、バックエンドでは認証情報から取得する方が安全
     content: str
     imageUrl: Optional[str] = None
     replyTo: Optional[str] = None
@@ -120,21 +117,16 @@ class ProfileUpdate(BaseModel):
     mode: str
 
 # バズり時のpredicted_likesをサンプリングする（100〜10000、右裾が薄い分布）
-# 目標: 投稿の90%が1000以下に収まるよう調整（単調減少の重み）
 def sample_viral_predicted_likes() -> int:
     """
     100〜10000の範囲で、値が大きいほど確率が小さくなるスキュー分布から整数を返す。
-    トランケートPareto（最小=100, 最大=10000）の逆関数法でサンプリング。
-    パラメータalpha≈0.954で、トランケート後でもP(X<=1000)≈0.90となるよう調整。
     """
     min_val = 100.0
     max_val = 10000.0
-    alpha = 0.95424  # 90%タイルが約1000になるよう調整（トランケート補正込み）
-    u = random.random()  # [0,1)
-    # トランケートParetoの逆CDF: x = m / (1 - u*(1 - (m/M)^alpha))^(1/alpha)
+    alpha = 0.95424
+    u = random.random()
     denom = 1.0 - u * (1.0 - (min_val / max_val) ** alpha)
     x = min_val / (denom ** (1.0 / alpha))
-    # 念のため境界に丸め
     if x < min_val:
         x = min_val
     elif x > max_val:
@@ -145,102 +137,85 @@ def sample_viral_predicted_likes() -> int:
 
 #投稿作成AIコメント追加データベース保存
 @app.post("/post")
-#async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)): # 認証を追加
 async def create_post(payload: PostCreate, user_id: str = Depends(get_current_user)):
-    #user_id = "test_user" # 仮のユーザーID（認証実装後に削除）
-    # payload.userId の代わりに認証済みの user_id を使う
-    # ... (AI分析とFirestore書き込み処理はほぼ同じ、userIdを引数のuser_idに変更) ...
-    
     # ユーザーのモード情報を取得
     loop = asyncio.get_running_loop()
     def get_user_mode():
         user_ref = db.collection("users").document(user_id)
         doc = user_ref.get()
         if doc.exists:
-            return doc.to_dict().get("mode", "てんさい")  # デフォルトは「てんさい」
-        return "てんさい"  # ユーザー情報がない場合もデフォルトは「てんさい」
+            return doc.to_dict().get("mode", "てんさい")
+        return "てんさい"
     
     user_mode = await loop.run_in_executor(None, get_user_mode)
     
-    # 1. AIによる安全性チェック（てんさいモードの時のみ）
-    if user_mode == "てんさい":
-        is_safe, reason = await validate_post_safety(payload.content)
-        if not is_safe:
-            # NG理由をデータベースに記録してからエラーを返す
-            def write_rejected():
-                doc_ref = db.collection("rejected_posts").document()
-                doc_ref.set({
-                    "userId": user_id,
-                    "content": payload.content,
-                    "imageUrl": payload.imageUrl,
-                    "replyTo": payload.replyTo,
-                    "timestamp": datetime.now(timezone.utc),
-                    "likes": [],
-                    "isSafe": False,
-                    "safetyReason": reason,
-                })
-                return doc_ref.id
-            try:
-                rejected_id = await loop.run_in_executor(None, write_rejected)
-                # 必要であれば rejected_id をログなどに活用可能
-            finally:
-                pass
-            raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
-
-    # 2. 包括的なAI分析を1回のAPI呼び出しで実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測・炎上判定）
-    analysis = await analyze_post_comprehensive(payload.content)
+    # ★★★ 1回のAPI呼び出しで安全性チェックと包括的分析を実行 ★★★
+    is_tensai_mode = (user_mode == "てんさい")
+    analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
+    
+    # てんさいモードで安全でない場合は投稿を拒否
+    if is_tensai_mode and not analysis["is_safe"]:
+        # NG理由をデータベースに記録してからエラーを返す
+        def write_rejected():
+            doc_ref = db.collection("rejected_posts").document()
+            doc_ref.set({
+                "userId": user_id,
+                "content": payload.content,
+                "imageUrl": payload.imageUrl,
+                "replyTo": payload.replyTo,
+                "timestamp": datetime.now(timezone.utc),
+                "likes": [],
+                "isSafe": False,
+                "safetyReason": analysis["safety_reason"],
+            })
+            return doc_ref.id
+        try:
+            rejected_id = await loop.run_in_executor(None, write_rejected)
+        finally:
+            pass
+        # フロントエンドのNgReasonモーダルに表示するためにエラーを返す
+        raise HTTPException(status_code=400, detail=f"不適切な投稿です: {analysis['safety_reason']}")
+    
+    # 分析結果を取得
     is_positive = analysis["is_positive"]
     reply_count = analysis["reply_count"]
     reaction_types = analysis["reaction_types"]
     predicted_likes = analysis["predicted_likes"]
     is_controversial = analysis["is_controversial"]
     
-    # 2.5. バズり判定（ポジティブな投稿のみ対象、厳しい条件で約5%の確率）
+    # バズり判定（ポジティブな投稿のみ対象、約5%の確率）
     is_viral = False
     if is_positive and not is_controversial:
         is_viral = await predict_viral(payload.content, is_positive)
-        # バズり確定時は predicted_likes を 100〜500 に強制上書き（UI/分析で判別しやすくするため）
         if is_viral:
             predicted_likes = sample_viral_predicted_likes()
     
-    # 3. AIコメントを生成（炎上時・バズり時は特別なコメントを多めに生成）
-    # ★★★ ここを1回のAPI呼び出しに統合 ★★★
+    # ★★★ AIコメントを1回のAPI呼び出しで生成 ★★★
     if is_controversial:
-        # 炎上時：炎上コメント(10) + 通常コメント(2) を1回で生成
-        all_comments = await generate_controversial_comments(
-            payload.content, 
-            count=12  # 炎上10件 + 通常2件
-        )
-        # 最初の10件が炎上コメント、残り2件が通常コメント的な扱い
-        generated_comments = all_comments
+        # 炎上時：炎上コメント12件を1回で生成
+        generated_comments = await generate_controversial_comments(payload.content, count=12)
     elif is_viral:
-        # バズり時：バズりコメント(15) + 通常コメント(3) を1回で生成
-        all_comments = await generate_viral_comments(
-            payload.content, 
-            count=18  # バズり15件 + 通常3件
-        )
-        generated_comments = all_comments
+        # バズり時：バズりコメント18件を1回で生成
+        generated_comments = await generate_viral_comments(payload.content, count=18)
     else:
-        # 通常時：通常コメント + リンクコメント を1回で生成
-        # reaction_typesの数 + リンク2件 = 合計で生成
+        # 通常時：通常コメント + リンクコメント を1回で統合生成
         total_normal = len(reaction_types) + 2
         
-        # 通常コメントとリンクコメントを統合して1回で生成
-        comment_prompt_parts = []
-        
-        # 通常のreaction_types分
-        for r_type in reaction_types:
-            comment_prompt_parts.append(f"{r_type}タイプのコメント")
-        
-        # リンクコメント2件
-        comment_prompt_parts.append("怪しいリンク付きコメント")
-        comment_prompt_parts.append("あおりコメント")
-        
         # 1回のAPI呼び出しで全てのコメントを生成
-        from gemini_utils import gemini_model, sanitize_ai_output
-        import re
-        
         if gemini_model:
+            # reaction_typesに基づいたコメントタイプのリストを作成
+            comment_types_description = []
+            for r_type in reaction_types:
+                if r_type == "positive":
+                    comment_types_description.append("前向きなコメント")
+                elif r_type == "neutral":
+                    comment_types_description.append("中立的なコメント")
+                elif r_type == "negative":
+                    comment_types_description.append("否定的なコメント")
+            
+            comment_types_description.append("怪しいリンク付きコメント（URL: https://myfirstfirebase-440d6.web.app/spam を含む）")
+            comment_types_description.append("あおりコメント")
+            
             unified_prompt = f"""
 あなたは小学生のSNSユーザーです。
 以下の投稿に対して、{total_normal}件のコメントを生成してください。
@@ -248,15 +223,15 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
 投稿: "{payload.content}"
 
 コメントの内訳:
-{chr(10).join([f"- {part}" for part in comment_prompt_parts])}
+{chr(10).join([f"{i+1}. {desc}" for i, desc in enumerate(comment_types_description)])}
 
 ルール:
 - 各コメントはひらがな・カタカナ・簡単な漢字のみ
 - 各コメントは40文字以内
 - 各コメントに絵文字を1つ使う
 - 小学生にも読めるやさしい言葉
-- positiveタイプ=前向き、neutralタイプ=中立、negativeタイプ=否定的
-- 怪しいリンク付きコメントには必ずこのURL『https://myfirstfirebase-440d6.web.app/spam』を文中に自然に含める
+- 前向きなコメント=明るい内容、中立的なコメント=普通の反応、否定的なコメント=批判的
+- 怪しいリンク付きコメントには必ずURL「https://myfirstfirebase-440d6.web.app/spam」を文中に自然に含める
 - あおりコメントは煽るような内容
 
 出力形式（各コメントを改行で区切る、{total_normal}件生成）:
@@ -271,6 +246,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 comments_list = [c.strip() for c in comment_text.split('\n') if c.strip()]
                 
                 # URLをaタグに変換
+                import re
                 def url_to_link(comment: str) -> str:
                     return re.sub(
                         r'(https?://[^\s]+)',
@@ -289,14 +265,13 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 
             except Exception as e:
                 print(f"統合コメント生成エラー: {e}")
-                # エラー時はデフォルトコメント
                 generated_comments = ["いいね！😄" for _ in range(total_normal)]
         else:
             generated_comments = ["いいね！😄" for _ in range(total_normal)]
 
-    # 4. 元のデータとAI分析結果を結合
+    # 元のデータとAI分析結果を結合
     new_post_data = {
-        "userId": user_id, # ★認証済みのIDを使用
+        "userId": user_id,
         "content": payload.content,
         "imageUrl": payload.imageUrl,
         "replyTo": payload.replyTo,
@@ -305,27 +280,29 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "isPositive": is_positive,
         "predictedReplyCount": reply_count,
         "predictedLikes": predicted_likes,
-        "isControversial": is_controversial,  # 炎上フラグを追加
-        "isViral": is_viral,  # バズりフラグを追加
+        "isControversial": is_controversial,
+        "isViral": is_viral,
         "aiComments": generated_comments,
     }
-    # ... (Firestore書き込み処理) ...
-    loop = asyncio.get_running_loop()
+    
+    # Firestore書き込み処理
     def write_to_firestore():
         doc_ref = db.collection("posts").document()
         doc_ref.set(new_post_data)
         return doc_ref.id
+    
     post_id = await loop.run_in_executor(None, write_to_firestore)
-        # 投稿完了後に投稿数をカウントして実績を更新
+    
+    # 投稿完了後に投稿数をカウントして実績を更新
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))
     await loop.run_in_executor(None, lambda: update_achievements(user_id, post_count))
+    
     return {"message": "投稿完了", "postId": post_id}
 
 
 #いいねのon/off切り替え
 @app.post("/like/{post_id}")
-async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): # 認証を追加
-    # body.get("userId") の代わりに認証済みの user_id を使う
+async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
     def toggle():
         post_ref = db.collection("posts").document(post_id)
@@ -346,7 +323,7 @@ async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)): #
 
 #リプライ取得
 @app.get("/replies/{post_id}")
-async def get_replies(post_id: str): # リプライ取得は認証不要の場合が多い
+async def get_replies(post_id: str):
     loop = asyncio.get_running_loop()
     def fetch():
         docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
@@ -392,11 +369,10 @@ async def get_replies(post_id: str): # リプライ取得は認証不要の場�
 
 #投稿一覧取得
 @app.get("/posts")
-async def get_posts(user_id: str = Depends(get_current_user)): # ログインユーザーの投稿のみ取得
+async def get_posts(user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
     def fetch():
         docs = db.collection("posts").where("replyTo", "==", None).where("userId", "==", user_id).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
-        # ユーザー情報を付与する
         posts_list = []
         for doc in docs:
             post_data = doc.to_dict()
@@ -416,7 +392,6 @@ async def get_posts(user_id: str = Depends(get_current_user)): # ログインユ
                             "iconColor": user_data.get("iconColor", "blue")
                         }
                     else:
-                        # ユーザー情報が見つからない場合はデフォルト値
                         post_data["user"] = {
                             "username": "ユーザー名",
                             "iconColor": "blue"
@@ -439,8 +414,7 @@ async def get_posts(user_id: str = Depends(get_current_user)): # ログインユ
     return results
 
 
-
-# --- 変更点4: プロフィール取得APIを追加 ---
+# --- プロフィール取得API ---
 @app.get("/profile")
 async def get_profile(user_id: str = Depends(get_current_user)):
     """ログインユーザーのプロフィールを取得"""
@@ -451,15 +425,14 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         if doc.exists:
             return doc.to_dict()
         else:
-            # プロフィールがまだ作成されていない場合、デフォルト値を返すかエラーにする
-            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさい"} # 例
+            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさい"}
     profile_data = await loop.run_in_executor(None, fetch_user_profile)
     if profile_data is None:
          raise HTTPException(status_code=404, detail="User profile not found")
     return profile_data
 
 
-# --- 変更点5: プロフィール更新APIを追加 ---
+# --- プロフィール更新API ---
 @app.put("/profile")
 async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
     """ログインユーザーのプロフィールを更新"""
@@ -468,15 +441,14 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
 
     def write_user_profile():
         user_ref = db.collection("users").document(user_id)
-        # set(..., merge=True) を使うと、指定したフィールドだけ更新できる
         user_ref.set(profile_data, merge=True)
-        return user_ref.get().to_dict() # 更新後のデータを返す
+        return user_ref.get().to_dict()
 
     updated_profile = await loop.run_in_executor(None, write_user_profile)
     return {"message": "プロフィール更新成功", "profile": updated_profile}
 
 
-
+# --- 実績関連の関数 ---
 ALL_ACHIEVEMENTS = {
     "post_10",
     "post_30",
@@ -484,7 +456,6 @@ ALL_ACHIEVEMENTS = {
     "like_total_100",
     "reply_total_20",
     "positive_20",
-
 }
 
 def count_user_posts(user_id: str):
@@ -495,14 +466,13 @@ def update_achievements(user_id: str, post_count: int):
     achievement_ref = db.collection("achievements").document(user_id)
     doc = achievement_ref.get()
     existing = doc.to_dict().get("unlocked", []) if doc.exists else []
-    achievements = set(existing)  # 重複を避けるために set にする
+    achievements = set(existing)
 
     if post_count >= 10:
         achievements.add("post_10")
 
-    if post_count >= 15:#あとで数字変える
+    if post_count >= 15:
         achievements.add("post_30")
-
 
     total_likes = count_total_predicted_likes(user_id)
     if total_likes >= 100:
@@ -513,15 +483,12 @@ def update_achievements(user_id: str, post_count: int):
         achievements.add("reply_total_20")
 
     positive_posts = count_positive_posts(user_id)
-    if positive_posts >= 1:#あとで数字変える
-        achievements.add("positive_20")  # ← ここ！
+    if positive_posts >= 1:
+        achievements.add("positive_20")
     
     controversial_posts = count_controversial_posts(user_id)
     if controversial_posts >= 1:
         achievements.add("fired_1")
-
-
-
 
     if ALL_ACHIEVEMENTS.issubset(achievements):
         achievements.add("all_achievements_unlocked")
