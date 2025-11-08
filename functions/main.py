@@ -234,7 +234,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
 - 怪しいリンク付きコメントには必ずURL「https://myfirstfirebase-440d6.web.app/spam」を文中に自然に含める
 - あおりコメントは煽るような内容
 
-出力形式（各コメントを改行で区切る、{total_normal}件生成）:
+出力形式（各コメントを改行で区切る、コメント本文だけ、{total_normal}件生成）:
 コメント1
 コメント2
 コメント3
