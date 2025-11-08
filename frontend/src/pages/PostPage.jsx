@@ -211,6 +211,19 @@ const PostPage = () => {
                   "ふぁいあ",
                   "アラン",
                   "くら",
+                  "かに",
+                  "くじら",
+                  "ほっけ",
+                  "たこ",
+                  "さけ",
+                  "たい",
+                  "ぺんぎん",
+                  "いるか",
+                  "あざらし",
+                  "カジキ",
+                  "チュナ",
+                  "ぱくぱく",
+                  "もぐ"
                 ];
                 const randomUsername =
                   usernames[Math.floor(Math.random() * usernames.length)];
