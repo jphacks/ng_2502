@@ -471,7 +471,7 @@ def update_achievements(user_id: str, post_count: int):
     if post_count >= 10:
         achievements.add("post_10")
 
-    if post_count >= 30#あとで数字変える
+    if post_count >= 30:#あとで数字変える
         achievements.add("post_30")
 
     total_likes = count_total_predicted_likes(user_id)
