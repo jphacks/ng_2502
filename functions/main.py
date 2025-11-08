@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 # from google.cloud import firestore
 from datetime import datetime, timezone
+import random  
 import asyncio
 from dotenv import load_dotenv 
 import os
@@ -121,6 +122,28 @@ class ProfileUpdate(BaseModel):
     iconColor: str
     mode: str
 
+# バズり時のpredicted_likesをサンプリングする（100〜10000、右裾が薄い分布）
+# 目標: 投稿の90%が1000以下に収まるよう調整（単調減少の重み）
+def sample_viral_predicted_likes() -> int:
+    """
+    100〜10000の範囲で、値が大きいほど確率が小さくなるスキュー分布から整数を返す。
+    トランケートPareto（最小=100, 最大=10000）の逆関数法でサンプリング。
+    パラメータalpha≈0.954で、トランケート後でもP(X<=1000)≈0.90となるよう調整。
+    """
+    min_val = 100.0
+    max_val = 10000.0
+    alpha = 0.95424  # 90%タイルが約1000になるよう調整（トランケート補正込み）
+    u = random.random()  # [0,1)
+    # トランケートParetoの逆CDF: x = m / (1 - u*(1 - (m/M)^alpha))^(1/alpha)
+    denom = 1.0 - u * (1.0 - (min_val / max_val) ** alpha)
+    x = min_val / (denom ** (1.0 / alpha))
+    # 念のため境界に丸め
+    if x < min_val:
+        x = min_val
+    elif x > max_val:
+        x = max_val
+    return int(x)
+
 # --- APIエンドポイントの定義 ---
 
 #投稿作成AIコメント追加データベース保存
@@ -179,6 +202,9 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     is_viral = False
     if is_positive and not is_controversial:
         is_viral = await predict_viral(payload.content, is_positive)
+        # バズり確定時は predicted_likes を 100〜500 に強制上書き（UI/分析で判別しやすくするため）
+        if is_viral:
+            predicted_likes = sample_viral_predicted_likes()
     
     # 3. AIコメントを生成（炎上時・バズり時は特別なコメントを多めに生成）
     if is_controversial:
