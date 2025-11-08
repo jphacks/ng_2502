@@ -28,7 +28,7 @@ async def validate_and_analyze_post(text: str, require_safety_check: bool = True
     
     Args:
         text: 投稿内容
-        require_safety_check: True=てんさいモード（安全チェック必要）、False=じゆうモード（分析のみ）
+        require_safety_check: True=てんさくモード（安全チェック必要）、False=じゆうモード（分析のみ）
     
     戻り値: {
         "is_safe": bool,
@@ -52,7 +52,7 @@ async def validate_and_analyze_post(text: str, require_safety_check: bool = True
         }
 
     if require_safety_check:
-        # てんさいモード：安全性チェック + 包括的分析
+        # てんさくモード：安全性チェック + 包括的分析
         prompt = f"""
 あなたは小学生向けSNSの分析AIです。以下の投稿を分析し、JSON形式で結果を返してください。
 

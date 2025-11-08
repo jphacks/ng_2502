@@ -144,16 +144,16 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         user_ref = db.collection("users").document(user_id)
         doc = user_ref.get()
         if doc.exists:
-            return doc.to_dict().get("mode", "てんさい")
-        return "てんさい"
+            return doc.to_dict().get("mode", "てんさく")
+        return "てんさく"
     
     user_mode = await loop.run_in_executor(None, get_user_mode)
     
     # ★★★ 1回のAPI呼び出しで安全性チェックと包括的分析を実行 ★★★
-    is_tensai_mode = (user_mode == "てんさい")
+    is_tensai_mode = (user_mode == "てんさく")
     analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
     
-    # てんさいモードで安全でない場合は投稿を拒否
+    # てんさくモードで安全でない場合は投稿を拒否
     if is_tensai_mode and not analysis["is_safe"]:
         # NG理由をデータベースに記録してからエラーを返す
         def write_rejected():
@@ -425,7 +425,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         if doc.exists:
             return doc.to_dict()
         else:
-            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさい"}
+            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさく"}
     profile_data = await loop.run_in_executor(None, fetch_user_profile)
     if profile_data is None:
          raise HTTPException(status_code=404, detail="User profile not found")
