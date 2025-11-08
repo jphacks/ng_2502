@@ -3,15 +3,16 @@
 //   npm install react-icons
 //   を実行してください）
 import {
-  FaHeart,
   FaCrown,
   FaFire,
-  FaRegLightbulb, // (例: FaUserEditの代わりに)
-  FaPlus,
-  FaSeedling,
-  FaStar,
+  FaRegCommentAlt,
   FaQuestion // 予備の「？」アイコン
 } from "react-icons/fa";
+import { FaPeopleGroup } from "react-icons/fa6";
+import { MdSunny } from "react-icons/md";
+import { TbEyeglassFilled } from "react-icons/tb";
+import { IoPersonSharp } from "react-icons/io5";
+import { LuSwords } from "react-icons/lu";
 
 /**
  * 実績のマスターデータ（設定資料）
@@ -24,73 +25,46 @@ export const ACHIEVEMENTS_MASTER = {
   // キーの名前 (例: "post_10") は、必ずバックエンド（main.py）で
   // 定義されている実績IDと *完全に* 一致させてください。
   "welcome_snr": {
-    "name": "SNRをはじめた",
-    "description": "SNRのアカウントを作成しました！ここからがスタートです！",
-    "icon": FaStar // ← インポートしたアイコンを指定
+    "name": "いだいなるよあけ",
+    "description": "SNRをはじめた！でんせつのまくあけだ。",
+    "icon": LuSwords // ← インポートしたアイコンを指定
   },
-  
-  "positive_20": {
-    "name": "ポジティブ投稿20件達成",
-    "description": "ポジティブな内容の投稿を20回行いました！",
-    "icon": FaRegLightbulb
-  },
-
-  // --- 投稿数 ---
-  
-  "post_10": {
-    "name": "投稿10件達成",
-    "description": "投稿を10回行いました！",
-    "icon": FaPlus // 値には、インポートしたアイコン部品そのものを入れます
-  },
-  "post_30": {
-    "name": "投稿30件達成",
-    "description": "投稿を30回も行いました！すごい！",
-    "icon": FaSeedling
-  },
-
-  // --- 炎上 ---
-  "fired_1": {
-    "name": "炎上経験",
-    "description": "不適切な投稿でAIに炎上させられました...",
-    "icon": FaFire
-  },
-  // "peace_10": {
-  //   "name": "平和が一番",
-  //   "description": "炎上せずに10回連続で投稿しました！",
-  //   "icon": FaRegLightbulb // (例: 平和なひらめきアイコン)
-  // },
-
   // --- いいね ---
   "like_total_100": {
-    "name": "総いいね100達成",
-    "description": "もらった「いいね」の合計が100を超えました！",
-    "icon": FaHeart
+    "name": "ハリウッドスター",
+    "description": "ごうけい100いいねもらった。もうひとつどうぞ❤",
+    "icon": TbEyeglassFilled
   },
-
   "reply_total_20": {
-  name: "総リプライ20達成",
-  description: "もらったリプライの合計が20を超えました！",
-  icon: FaHeart // ← FaReplyでもOK、好みに応じて
-},
-  // "like_once_80": {
-  //   "name": "バズった！",
-  //   "description": "1つの投稿で80以上のいいねをもらいました！",
-  //   "icon": FaCrown
-  // },
- 
+    "name": "わだいのあのこ",
+    "description": "ごうけい20このコメントもらった。じぶんをつらぬけばいいんだよ。",
+    "icon": FaRegCommentAlt
+  },
+  // --- 炎上 ---
+  "fired_1": {
+    "name": "やけど",
+    "description": "えんじょうした。だれだってしっぱいからまなぶんだ。",
+    "icon": FaFire
+  },
+  // --- 投稿数 ---
+  "post_10": {
+    "name": "インフルエンサー？",
+    "description": "10かいとうこうした。おそとでもしっかりあそぶんだよ。",
+    "icon": IoPersonSharp
+  },
+  "post_30": {
+    "name": "インフルエンサー！",
+    "description": "30かいとうこうした。ひまなの？",
+    "icon": FaPeopleGroup
+  },
+  "positive_20": {
+    "name": "みんなのたいよう",
+    "description": "まえむきなとうこうを20かいした。きみがせかいをてらしているよ。",
+    "icon": MdSunny
+  },
   "all_achievements_unlocked": {
-  name: "全実績解除",
-  description: "すべての称号を獲得しました！あなたは真の達成者です！",
-  icon: FaCrown // 👑 王冠アイコンで特別感を演出
-}
-
-
-  // --- 予備 ---
-  // もしバックエンドから、このリストにないIDが送られてきた場合に
-  // 表示するための「？」アイコンも定義しておくと安全です。
-  // "unknown": {
-  //   "name": "？？？",
-  //   "description": "未知の実績です",
-  //   "icon": FaQuestion
-  // }
+    "name": "SNRマスター",
+    "description": "すべてのバッジをあつめた！きみはSNRマスターだ！",
+    "icon": FaCrown
+  }
 };
