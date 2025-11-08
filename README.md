@@ -1,7 +1,7 @@
 # SNR(ソナー)～SNSの一歩前～
 ※最新の変更はmainブランチではなくdevブランチを確認してください。
 
-[完成形イメージ動画はこちら！](https://drive.google.com/file/d/10oL42NqFYXPN8nvh4iXJTcGyFMOccN7U/view?usp=drive_link)
+[完成版デモ動画はこちら！](https://youtu.be/A3SGCBRxSFA)
 
 完成形イメージ
 <img width="1920" height="1200" alt="スクリーンショット (45)" src="https://github.com/user-attachments/assets/d9355472-3dbc-4d4e-b409-3ec59e13377e" />
