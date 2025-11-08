@@ -17,10 +17,11 @@ import slide3 from "../assets/slide3.png";
 import slide4 from "../assets/slide4.png";
 import slide5 from "../assets/slide5.png";
 import slide6 from "../assets/slide6.png";
+import slide7 from "../assets/slide7.png";
 
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
-const images = [slide1, slide2, slide3, slide4, slide5, slide6];
+const images = [slide1, slide2, slide3, slide4, slide5, slide6, slide7];
 
 export default function SlideModal({ isOpen, onClose }) {
   const [index, setIndex] = useState(0);
