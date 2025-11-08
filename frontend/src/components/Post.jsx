@@ -53,7 +53,7 @@ const Post = ({
   // post propがない場合は何も表示しない
   if (!post) return null;
 
-  const { content } = post;
+  // const { content } = post;
   // user 情報がない場合に備えてデフォルトを用意
   const safeUser = post.user || { username: "ユーザー名", iconColor: "blue" };
   const { src, alt } = iconMap[safeUser.iconColor] || iconMap.blue;
@@ -65,10 +65,10 @@ const Post = ({
   };
 
   // コメントボタン押下時にpostpageへ遷移し、InputCommentを開くフラグを渡す
-  const handleCommentClick = (e) => {
-    e.stopPropagation();
-    navigate("/post", { state: { post: post, openComment: true } });
-  };
+  // const handleCommentClick = (e) => {
+  //   e.stopPropagation();
+  //   navigate("/post", { state: { post: post, openComment: true } });
+  // };
 
   const handlePostClick = () => {
     if (!isComment) {
@@ -133,11 +133,11 @@ const Post = ({
 
           {!isComment && (
             <Box ml={10}>
-              <ReactionButton
+              {/* <ReactionButton
                 label="Comment"
                 icon={<SlSpeech fontSize={{ base: "16px", md: "20px" }} />}
                 onClick={handleCommentClick}
-              />
+              /> */}
             </Box>
           )}
         </HStack>
