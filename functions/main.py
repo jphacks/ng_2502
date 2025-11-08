@@ -19,14 +19,11 @@ from firebase_admin import firestore as admin_firestore
 # gemini_utils.pyからAI関数をインポート
 from gemini_utils import (
     validate_post_safety,
-    judge_post_positivity,
-    predict_post_reactions,
+    analyze_post_comprehensive,  # 統合版を使用
     generate_reaction_comments_bulk,
     generate_link_comments,
-    predict_post_likes,
-    predict_controversy,
-    generate_controversial_comments,
     predict_viral,
+    generate_controversial_comments,
     generate_viral_comments,
 )
 
@@ -59,7 +56,7 @@ except FileNotFoundError:
         cred_info = json.loads(cred_json_str)
         cred = admin_credentials.Certificate(cred_info)
     else:
-        print("⚠️ サービスアカウントキーが見つかりません。エミュレータモードでのみ動作します。")
+        print("⚠️ サービスアカウントキーが見つかりません。エミュレータモードのみ動作します。")
 
 # credが見つかった場合のみFirebase Adminを初期化
 if cred:
@@ -160,13 +157,13 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         user_ref = db.collection("users").document(user_id)
         doc = user_ref.get()
         if doc.exists:
-            return doc.to_dict().get("mode", "てんさく")  # デフォルトは「てんさく」
-        return "てんさく"  # ユーザー情報がない場合もデフォルトは「てんさく」
+            return doc.to_dict().get("mode", "てんさい")  # デフォルトは「てんさい」
+        return "てんさい"  # ユーザー情報がない場合もデフォルトは「てんさい」
     
     user_mode = await loop.run_in_executor(None, get_user_mode)
     
-    # 1. AIによる安全性チェック（てんさくモードの時のみ）
-    if user_mode == "てんさく":
+    # 1. AIによる安全性チェック（てんさいモードの時のみ）
+    if user_mode == "てんさい":
         is_safe, reason = await validate_post_safety(payload.content)
         if not is_safe:
             # NG理由をデータベースに記録してからエラーを返す
@@ -190,13 +187,13 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 pass
             raise HTTPException(status_code=400, detail=f"不適切な投稿です: {reason}")
 
-    # 2. 残りのAI分析を並列実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測・炎上判定）
-    (is_positive, (reply_count, reaction_types), predicted_likes, is_controversial) = await asyncio.gather(
-        judge_post_positivity(payload.content),
-        predict_post_reactions(payload.content),
-        predict_post_likes(payload.content),
-        predict_controversy(payload.content),
-    )
+    # 2. 包括的なAI分析を1回のAPI呼び出しで実行（ポジティブ判定・返信数/タイプ予測・投稿いいね予測・炎上判定）
+    analysis = await analyze_post_comprehensive(payload.content)
+    is_positive = analysis["is_positive"]
+    reply_count = analysis["reply_count"]
+    reaction_types = analysis["reaction_types"]
+    predicted_likes = analysis["predicted_likes"]
+    is_controversial = analysis["is_controversial"]
     
     # 2.5. バズり判定（ポジティブな投稿のみ対象、厳しい条件で約5%の確率）
     is_viral = False
@@ -207,21 +204,95 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
             predicted_likes = sample_viral_predicted_likes()
     
     # 3. AIコメントを生成（炎上時・バズり時は特別なコメントを多めに生成）
+    # ★★★ ここを1回のAPI呼び出しに統合 ★★★
     if is_controversial:
-        # 炎上時：通常コメント（positiveを除外） + 炎上コメント（合計で多め）
-        controversial_comments = await generate_controversial_comments(payload.content, count=10)
-        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:2], is_controversial=True)
-        generated_comments = controversial_comments + normal_comments
+        # 炎上時：炎上コメント(10) + 通常コメント(2) を1回で生成
+        all_comments = await generate_controversial_comments(
+            payload.content, 
+            count=12  # 炎上10件 + 通常2件
+        )
+        # 最初の10件が炎上コメント、残り2件が通常コメント的な扱い
+        generated_comments = all_comments
     elif is_viral:
-        # バズり時：バズり用ポジティブコメント + 通常コメント（合計で多め）
-        viral_comments = await generate_viral_comments(payload.content, count=15)
-        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types[:3])
-        generated_comments = viral_comments + normal_comments
+        # バズり時：バズりコメント(15) + 通常コメント(3) を1回で生成
+        all_comments = await generate_viral_comments(
+            payload.content, 
+            count=18  # バズり15件 + 通常3件
+        )
+        generated_comments = all_comments
     else:
-        # 通常時：通常コメントのみ
-        normal_comments = await generate_reaction_comments_bulk(payload.content, reaction_types)
-        link_comments =  await generate_link_comments(payload.content, 2, "https://myfirstfirebase-440d6.web.app/spam")
-        generated_comments = normal_comments + link_comments
+        # 通常時：通常コメント + リンクコメント を1回で生成
+        # reaction_typesの数 + リンク2件 = 合計で生成
+        total_normal = len(reaction_types) + 2
+        
+        # 通常コメントとリンクコメントを統合して1回で生成
+        comment_prompt_parts = []
+        
+        # 通常のreaction_types分
+        for r_type in reaction_types:
+            comment_prompt_parts.append(f"{r_type}タイプのコメント")
+        
+        # リンクコメント2件
+        comment_prompt_parts.append("怪しいリンク付きコメント")
+        comment_prompt_parts.append("あおりコメント")
+        
+        # 1回のAPI呼び出しで全てのコメントを生成
+        from gemini_utils import gemini_model, sanitize_ai_output
+        import re
+        
+        if gemini_model:
+            unified_prompt = f"""
+あなたは小学生のSNSユーザーです。
+以下の投稿に対して、{total_normal}件のコメントを生成してください。
+
+投稿: "{payload.content}"
+
+コメントの内訳:
+{chr(10).join([f"- {part}" for part in comment_prompt_parts])}
+
+ルール:
+- 各コメントはひらがな・カタカナ・簡単な漢字のみ
+- 各コメントは40文字以内
+- 各コメントに絵文字を1つ使う
+- 小学生にも読めるやさしい言葉
+- positiveタイプ=前向き、neutralタイプ=中立、negativeタイプ=否定的
+- 怪しいリンク付きコメントには必ずこのURL『https://myfirstfirebase-440d6.web.app/spam』を文中に自然に含める
+- あおりコメントは煽るような内容
+
+出力形式（各コメントを改行で区切る、{total_normal}件生成）:
+コメント1
+コメント2
+コメント3
+...
+"""
+            try:
+                response = await gemini_model.generate_content_async(unified_prompt)
+                comment_text = sanitize_ai_output(response.text.strip())
+                comments_list = [c.strip() for c in comment_text.split('\n') if c.strip()]
+                
+                # URLをaタグに変換
+                def url_to_link(comment: str) -> str:
+                    return re.sub(
+                        r'(https?://[^\s]+)',
+                        r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
+                        comment
+                    )
+                
+                generated_comments = [url_to_link(c) for c in comments_list]
+                
+                # 生成数が足りない場合はデフォルトで補完
+                while len(generated_comments) < total_normal:
+                    generated_comments.append("いいね！😄")
+                
+                # 生成数が多すぎる場合は切り詰め
+                generated_comments = generated_comments[:total_normal]
+                
+            except Exception as e:
+                print(f"統合コメント生成エラー: {e}")
+                # エラー時はデフォルトコメント
+                generated_comments = ["いいね！😄" for _ in range(total_normal)]
+        else:
+            generated_comments = ["いいね！😄" for _ in range(total_normal)]
 
     # 4. 元のデータとAI分析結果を結合
     new_post_data = {
@@ -381,7 +452,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
             return doc.to_dict()
         else:
             # プロフィールがまだ作成されていない場合、デフォルト値を返すかエラーにする
-            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさく"} # 例
+            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさい"} # 例
     profile_data = await loop.run_in_executor(None, fetch_user_profile)
     if profile_data is None:
          raise HTTPException(status_code=404, detail="User profile not found")
