@@ -26,14 +26,14 @@ export const AttentionModal = ({ isOpen, onClose, onCommentSubmit }) => {
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>気を付けてね</ModalHeader>
+        <ModalHeader>きをつけてね</ModalHeader>
         <ModalCloseButton
           _focus={{ boxShadow: "none", outline: "none" }}
           border={"none"}
         />
         <ModalBody>
           <Text>
-            あやしいリンクをおすとこんな風にこわいめにあっちゃうよ。あやしいリンクは絶対にさわらないようにしよう
+            あやしいリンクをおすとこんなふうにこわいめにあっちゃうよ。あやしいリンクはぜったいにさわらないようにしよう
           </Text>
         </ModalBody>
         <ModalFooter>

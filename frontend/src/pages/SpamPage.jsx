@@ -55,7 +55,7 @@ const CenteredLayout = () => {
           color="white"
           fontWeight="bold"
         >
-          あなたのスマホはわるい人のせいでやばいことになっています。すぐにに下のボタンをクリックして、ウイルスをやっつけてください！
+          あなたのスマホはわるい人のせいでやばいことになっています。すぐに下のボタンをクリックして、ウイルスをやっつけてください！
         </Text>
 
         <Box fontSize="5xl" fontWeight="bold" color="white" ml="2">
