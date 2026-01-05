@@ -1,3 +1,55 @@
+###
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+#fastapiライブラリから導入
+
+from config.firebase import init_firebase
+from routers import posts, likes, replies, profile, achievements
+#from自分のファイル名　import関数名
+#configフォルダ内のfirebase.pyからinit_firebase関数をインポート
+
+app = FastAPI()
+#FastAPIインスタンスを作成
+init_firebase()
+#Firebase初期化関数を実行
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://myfirstfirebase-440d6.web.app"
+    ]   ,
+    allow_credentials=True,#認証機能を許可
+    allow_methods=["*"],    #すべてのHTTPメソッドを許可
+    allow_headers=["*"],    #すべてのHTTPヘッダーを許可
+)
+#CORSミドルウェアを追加し、指定されたオリジンからのリクエストを許可
+
+app.include_router(posts.router)
+app.include_router(likes.router)
+app.include_router(replies.router)
+app.include_router(profile.router)
+app.include_router(achievements.router)
+#FastAPI の include_router() は APIRouter 型のオブジェクトを受け取る関数。
+
+
+###
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
