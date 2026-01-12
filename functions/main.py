@@ -1,18 +1,25 @@
 ###
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv 
 #fastapiライブラリから導入
 
-from config.firebase import init_firebase
+from config.firebase import init_firebase,db
 from routers import posts, likes, replies, profile, achievements
+from auth.dependencies import get_current_user
+from utils.predicted_likes import sample_viral_predicted_likes
+
 #from自分のファイル名　import関数名
 #configフォルダ内のfirebase.pyからinit_firebase関数をインポート
+
+load_dotenv()
 
 app = FastAPI()
 #FastAPIインスタンスを作成
 init_firebase()
 #Firebase初期化関数を実行
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,31 +42,14 @@ app.include_router(achievements.router)
 #FastAPI の include_router() は APIRouter 型のオブジェクトを受け取る関数。
 
 
-###
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from models.post import PostCreate
 from typing import Optional, List
 # from google.cloud import firestore
 from datetime import datetime, timezone
 import random  
 import asyncio
-from dotenv import load_dotenv 
+
 import os
 import json
 
@@ -78,112 +68,6 @@ from gemini_utils import (
     sanitize_ai_output,
 )
 
-app = FastAPI()
-load_dotenv()
-
-# --- CORSミドルウェアの設定 (変更なし) ---
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://myfirstfirebase-440d6.web.app"
-]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- Firebase Admin SDKの初期化とFirestoreクライアント ---
-cred = None
-try:
-    # ローカル開発用にサービスアカウントキーファイルを試す
-    cred = admin_credentials.Certificate("serviceAccountKey.json")
-except FileNotFoundError:
-    # 本番環境用に環境変数から読み込む (Renderなどで設定)
-    cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-    if cred_json_str:
-        cred_info = json.loads(cred_json_str)
-        cred = admin_credentials.Certificate(cred_info)
-    else:
-        print("⚠️ サービスアカウントキーが見つかりません。エミュレータモードのみ動作します。")
-
-# credが見つかった場合のみFirebase Adminを初期化
-if cred:
-    try:
-        firebase_admin.initialize_app(cred)
-    except ValueError as e:
-        # すでに初期化されている場合は無視
-        if "already exists" not in str(e):
-            raise e
-else:
-     # エミュレータ使用時など、credがない場合でも初期化を試みる（一部機能は制限される）
-     try:
-        firebase_admin.initialize_app()
-     except ValueError as e:
-        if "already exists" not in str(e):
-            raise e
-
-
-# Firestoreクライアントの初期化 (エミュレータ/本番切り替え)
-if os.getenv("FIRESTORE_EMULATOR_HOST"):
-    print("🔥 Firestore Emulator に接続しています")
-    db = admin_firestore.Client(project="myfirstfirebase-440d6") # エミュレータの場合はプロジェクトIDが必要なことがある
-else:
-    print("⚠️ 本番Firestoreに接続しています")
-    # 本番環境では credentials は initialize_app で設定済みなので不要
-    db = admin_firestore.client()
-
-# --- 変更点2: 認証用の関数を定義 ---
-# HTTPBearer スキーマのインスタンスを作成
-bearer_scheme = HTTPBearer()
-
-async def get_current_user(cred: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
-    """ヘッダーからトークンを取得し、検証してユーザーIDを返す"""
-    if cred is None:
-        print("❌ Authorization ヘッダーがありません")
-        raise HTTPException(status_code=401, detail="Bearer token missing")
-
-    print(f"🔍 受け取ったトークン: {cred.credentials[:30]}...")  # トークンの先頭だけ表示
-
-    try:
-        decoded_token = auth.verify_id_token(cred.credentials)
-        print(f"✅ トークン検証成功: uid={decoded_token['uid']}")
-        return decoded_token['uid']
-    except Exception as e:
-        print(f"❌ トークン検証失敗: {e}")
-        raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {e}")
-
-
-# --- Pydanticモデルの定義 ---
-class PostCreate(BaseModel):
-    content: str
-    imageUrl: Optional[str] = None
-    replyTo: Optional[str] = None
-
-# --- 変更点3: Profile更新用のモデルを追加 ---
-class ProfileUpdate(BaseModel):
-    username: str
-    iconColor: str
-    mode: str
-
-# バズり時のpredicted_likesをサンプリングする（100〜10000、右裾が薄い分布）
-def sample_viral_predicted_likes() -> int:
-    """
-    100〜10000の範囲で、値が大きいほど確率が小さくなるスキュー分布から整数を返す。
-    """
-    min_val = 100.0
-    max_val = 10000.0
-    alpha = 0.95424
-    u = random.random()
-    denom = 1.0 - u * (1.0 - (min_val / max_val) ** alpha)
-    x = min_val / (denom ** (1.0 / alpha))
-    if x < min_val:
-        x = min_val
-    elif x > max_val:
-        x = max_val
-    return int(x)
 
 # --- APIエンドポイントの定義 ---
 
@@ -351,223 +235,3 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     
     return {"message": "投稿完了", "postId": post_id}
 
-
-#いいねのon/off切り替え
-@app.post("/like/{post_id}")
-async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)):
-    loop = asyncio.get_running_loop()
-    def toggle():
-        post_ref = db.collection("posts").document(post_id)
-        doc = post_ref.get()
-        if not doc.exists: return None
-        data = doc.to_dict() or {}
-        likes = data.get("likes", [])
-        if user_id in likes:
-            post_ref.update({"likes": admin_firestore.ArrayRemove([user_id])})
-        else:
-            post_ref.update({"likes": admin_firestore.ArrayUnion([user_id])})
-        return post_ref.get().to_dict().get("likes", [])
-    new_likes = await loop.run_in_executor(None, toggle)
-    if new_likes is None:
-        raise HTTPException(status_code=404, detail="投稿が見つかりません")
-    return {"message": "いいね更新", "likes": new_likes}
-
-
-#リプライ取得
-@app.get("/replies/{post_id}")
-async def get_replies(post_id: str):
-    loop = asyncio.get_running_loop()
-    def fetch():
-        docs = db.collection("posts").where("replyTo", "==", post_id).order_by("timestamp").stream()
-        replies_list = []
-        for doc in docs:
-            reply_data = doc.to_dict()
-            reply_data["id"] = doc.id
-            
-            # ユーザー情報を取得して投稿データに追加
-            user_id = reply_data.get("userId")
-            if user_id:
-                try:
-                    user_ref = db.collection("users").document(user_id)
-                    user_doc = user_ref.get()
-                    if user_doc.exists:
-                        user_data = user_doc.to_dict()
-                        reply_data["user"] = {
-                            "username": user_data.get("username", "ユーザー名"),
-                            "iconColor": user_data.get("iconColor", "blue")
-                        }
-                    else:
-                        reply_data["user"] = {
-                            "username": "ユーザー名",
-                            "iconColor": "blue"
-                        }
-                except Exception as e:
-                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id}): {e}")
-                    reply_data["user"] = {
-                        "username": "ユーザー名",
-                        "iconColor": "blue"
-                    }
-            else:
-                reply_data["user"] = {
-                    "username": "ユーザー名",
-                    "iconColor": "blue"
-                }
-            
-            replies_list.append(reply_data)
-        return replies_list
-    results = await loop.run_in_executor(None, fetch)
-    return results
-
-
-#投稿一覧取得
-@app.get("/posts")
-async def get_posts(user_id: str = Depends(get_current_user)):
-    loop = asyncio.get_running_loop()
-    def fetch():
-        docs = db.collection("posts").where("replyTo", "==", None).where("userId", "==", user_id).order_by("timestamp", direction=admin_firestore.Query.DESCENDING).stream()
-        posts_list = []
-        for doc in docs:
-            post_data = doc.to_dict()
-            post_data["id"] = doc.id
-            post_data["predictedLikes"] = post_data.get("predictedLikes", 0)
-            
-            # ユーザー情報を取得して投稿データに追加
-            user_id_from_post = post_data.get("userId")
-            if user_id_from_post:
-                try:
-                    user_ref = db.collection("users").document(user_id_from_post)
-                    user_doc = user_ref.get()
-                    if user_doc.exists:
-                        user_data = user_doc.to_dict()
-                        post_data["user"] = {
-                            "username": user_data.get("username", "ユーザー名"),
-                            "iconColor": user_data.get("iconColor", "blue")
-                        }
-                    else:
-                        post_data["user"] = {
-                            "username": "ユーザー名",
-                            "iconColor": "blue"
-                        }
-                except Exception as e:
-                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id_from_post}): {e}")
-                    post_data["user"] = {
-                        "username": "ユーザー名",
-                        "iconColor": "blue"
-                    }
-            else:
-                post_data["user"] = {
-                    "username": "ユーザー名",
-                    "iconColor": "blue"
-                }
-            
-            posts_list.append(post_data)
-        return posts_list
-    results = await loop.run_in_executor(None, fetch)
-    return results
-
-
-# --- プロフィール取得API ---
-@app.get("/profile")
-async def get_profile(user_id: str = Depends(get_current_user)):
-    """ログインユーザーのプロフィールを取得"""
-    loop = asyncio.get_running_loop()
-    def fetch_user_profile():
-        user_ref = db.collection("users").document(user_id)
-        doc = user_ref.get()
-        if doc.exists:
-            return doc.to_dict()
-        else:
-            return {"username": "新しいユーザー", "iconColor": "blue", "mode": "てんさく"}
-    profile_data = await loop.run_in_executor(None, fetch_user_profile)
-    if profile_data is None:
-         raise HTTPException(status_code=404, detail="User profile not found")
-    return profile_data
-
-
-# --- プロフィール更新API ---
-@app.put("/profile")
-async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
-    """ログインユーザーのプロフィールを更新"""
-    loop = asyncio.get_running_loop()
-    profile_data = payload.dict()
-
-    def write_user_profile():
-        user_ref = db.collection("users").document(user_id)
-        user_ref.set(profile_data, merge=True)
-        return user_ref.get().to_dict()
-
-    updated_profile = await loop.run_in_executor(None, write_user_profile)
-    return {"message": "プロフィール更新成功", "profile": updated_profile}
-
-
-# --- 実績関連の関数 ---
-ALL_ACHIEVEMENTS = {
-    "post_10",
-    "post_30",
-    "fired_1",
-    "like_total_100",
-    "reply_total_20",
-    "positive_20",
-}
-
-def count_user_posts(user_id: str):
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
-    return sum(1 for _ in docs)
-
-def update_achievements(user_id: str, post_count: int):
-    achievement_ref = db.collection("achievements").document(user_id)
-    doc = achievement_ref.get()
-    existing = doc.to_dict().get("unlocked", []) if doc.exists else []
-    achievements = set(existing)
-
-    if post_count >= 10:
-        achievements.add("post_10")
-
-    if post_count >= 30:#あとで数字変える
-        achievements.add("post_30")
-
-    total_likes = count_total_predicted_likes(user_id)
-    if total_likes >= 100:
-        achievements.add("like_total_100")
-
-    total_replies = count_total_predicted_replies(user_id)
-    if total_replies >= 20:
-        achievements.add("reply_total_20")
-
-    positive_posts = count_positive_posts(user_id)
-    if positive_posts >= 20:#あとで数字変える
-        achievements.add("positive_20")  # ← ここ！
-    
-    controversial_posts = count_controversial_posts(user_id)
-    if controversial_posts >= 1:
-        achievements.add("fired_1")
-
-    if ALL_ACHIEVEMENTS.issubset(achievements):
-        achievements.add("all_achievements_unlocked")
-
-    achievement_ref.set({"unlocked": list(achievements)}, merge=True)
-
-def count_controversial_posts(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).where("isControversial", "==", True).stream()
-    return sum(1 for _ in docs)
-
-def count_total_predicted_likes(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
-    return sum(doc.to_dict().get("predictedLikes", 0) for doc in docs)
-
-def count_total_predicted_replies(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
-    return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
-
-def count_positive_posts(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).where("isPositive", "==", True).stream()
-    return sum(1 for _ in docs)
-
-@app.get("/achievements")
-async def get_achievements(user_id: str = Depends(get_current_user)):
-    loop = asyncio.get_running_loop()
-    def fetch():
-        doc = db.collection("achievements").document(user_id).get()
-        return doc.to_dict().get("unlocked", []) if doc.exists else []
-    unlocked = await loop.run_in_executor(None, fetch)
-    return {"achievements": unlocked}

@@ -64,6 +64,7 @@ node_modules/
 
 # dotenv environment variables file
 .env
+<<<<<<< HEAD
 .venv
 /venv
 # dataconnect generated files
@@ -78,3 +79,14 @@ __pycache__/
 
 # backendディレクトリ内の仮想環境を除外
 backend/venv/
+=======
+venv/
+env/
+.venv/
+# dataconnect generated files
+.dataconnect
+
+# Ignore backend virtualenv
+backend/venv/
+backup_backend.zip
+>>>>>>> origin

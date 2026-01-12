@@ -49,4 +49,17 @@ async def get_posts(user_id: str = Depends(get_current_user)):
                         }
 
                 except Exception as e:
-                    print(f"⚠️ ユーザー
+                    print(f"⚠️ ユーザー情報取得エラー (userId={user_id_from_post}): {e}")
+                    post_data["user"] = {
+                        "username": "ユーザー名",
+                        "iconColor": "blue"
+                    }
+            else:
+                post_data["user"] = {
+                    "username": "ユーザー名",
+                    "iconColor": "blue"
+                }
+            posts_list.append(post_data)
+        return posts_list
+    results = await loop.run_in_executor(None, fetch)
+    return results
