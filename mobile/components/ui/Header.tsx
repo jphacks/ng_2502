@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { XStack, Text } from "tamagui";
 import { CircleIcon } from "./CircleIcon";
 import { MarkButton } from "./MarkButton";
 
@@ -16,42 +16,34 @@ export const Header: React.FC<Props> = ({
   onPressCreate,
   iconSrc,
 }) => (
-  <View style={styles.container}>
+  <XStack
+    height={72}
+    paddingHorizontal="$4"
+    alignItems="center"
+    justifyContent="space-between"
+    backgroundColor="$background"
+  >
     <CircleIcon src={iconSrc} alt="user" />
-    <Text style={styles.title}>{title}</Text>
-    <View style={styles.buttonGroup}>
+    <Text fontSize={20} fontWeight="700">
+      {title}
+    </Text>
+    <XStack gap="$2">
       <MarkButton
-        icon={<Text style={styles.iconText}>?</Text>}
+        icon={
+          <Text fontSize={20} color="#FFB433" fontWeight="700">
+            ?
+          </Text>
+        }
         onPress={onPressTutorial}
       />
       <MarkButton
-        icon={<Text style={styles.iconText}>＋</Text>}
+        icon={
+          <Text fontSize={20} color="#FFB433" fontWeight="700">
+            ＋
+          </Text>
+        }
         onPress={onPressCreate}
       />
-    </View>
-  </View>
+    </XStack>
+  </XStack>
 );
-
-const styles = StyleSheet.create({
-  container: {
-    height: 72,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  iconText: {
-    fontSize: 20,
-    color: "#FFB433",
-    fontWeight: "700",
-  },
-});

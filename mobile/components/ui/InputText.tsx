@@ -1,45 +1,25 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TextInputProps,
-} from "react-native";
+import { Input, Label, YStack } from "tamagui";
+import { TextInputProps } from "react-native";
 
 type Props = TextInputProps & { label?: string };
 
 export const InputText: React.FC<Props> = ({ label, ...rest }) => (
-  <View style={styles.container}>
-    {label ? <Text style={styles.label}>{label}</Text> : null}
-    <TextInput
+  <YStack gap="$2" marginBottom="$3">
+    {label ? (
+      <Label fontSize={14} fontWeight="600" color="$color">
+        {label}
+      </Label>
+    ) : null}
+    <Input
       {...rest}
-      style={[styles.input, rest.multiline && styles.multiline]}
+      borderWidth={1}
+      borderColor="#FFB433"
+      borderRadius="$3"
+      paddingHorizontal="$3"
+      paddingVertical="$2"
+      fontSize={16}
       placeholderTextColor="#999"
     />
-  </View>
+  </YStack>
 );
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#FFB433",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-  },
-  multiline: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-});

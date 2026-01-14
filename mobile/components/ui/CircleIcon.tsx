@@ -1,23 +1,13 @@
 import React from "react";
-import { Image, ImageSourcePropType, StyleSheet } from "react-native";
+import { Avatar } from "tamagui";
+import { ImageSourcePropType } from "react-native";
 
 type Props = { src: ImageSourcePropType; alt?: string; size?: number };
 
 export const CircleIcon: React.FC<Props> = ({ src, size = 48 }) => {
   return (
-    <Image
-      source={src}
-      style={[
-        styles.image,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
-      resizeMode="cover"
-    />
+    <Avatar circular size={size}>
+      <Avatar.Image source={src} />
+    </Avatar>
   );
 };
-
-const styles = StyleSheet.create({
-  image: {
-    backgroundColor: "#f0f0f0",
-  },
-});

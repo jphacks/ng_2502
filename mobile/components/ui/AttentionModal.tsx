@@ -1,57 +1,40 @@
 import React from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Linking,
-} from "react-native";
+import { Linking } from "react-native";
+import { Sheet, Text, Button, YStack } from "tamagui";
 
 type Props = { visible: boolean; onClose: () => void };
 
 export const AttentionModal: React.FC<Props> = ({ visible, onClose }) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onClose}
+  <Sheet
+    modal
+    open={visible}
+    onOpenChange={onClose}
+    snapPoints={[40]}
+    dismissOnSnapToBottom
   >
-    <View style={styles.backdrop}>
-      <View style={styles.card}>
-        <Text style={styles.title}>きをつけてね</Text>
-        <Text style={styles.body}>
+    <Sheet.Overlay backgroundColor="rgba(0,0,0,0.35)" />
+    <Sheet.Frame padding="$4" gap="$3" borderRadius="$4">
+      <YStack gap="$3">
+        <Text fontSize={18} fontWeight="700">
+          きをつけてね
+        </Text>
+        <Text fontSize={15} color="#444">
           あやしいリンクをおすとこわいめにあっちゃうよ。あやしいリンクはぜったいにさわらないようにしよう。
         </Text>
-        <TouchableOpacity
-          style={styles.button}
+        <Button
+          backgroundColor="#FFB433"
+          borderRadius="$3"
+          paddingVertical="$3"
+          color="#fff"
+          fontWeight="700"
           onPress={() => {
             onClose();
             Linking.openURL("snr://list").catch(() => {});
           }}
         >
-          <Text style={styles.buttonText}>とうこうページにもどる</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
+          とうこうページにもどる
+        </Button>
+      </YStack>
+    </Sheet.Frame>
+  </Sheet>
 );
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16 },
-  title: { fontSize: 18, fontWeight: "700", marginBottom: 10 },
-  body: { fontSize: 15, color: "#444", marginBottom: 16 },
-  button: {
-    backgroundColor: "#FFB433",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "700" },
-});
