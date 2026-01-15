@@ -1,30 +1,123 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { StyleSheet, Pressable } from "react-native";
+import { Text, YStack } from "tamagui";
+import {
+  FontAwesome,
+  MaterialIcons,
+  MaterialCommunityIcons,
+  Ionicons,
+} from "@expo/vector-icons";
+import type { AchievementIcon as AchievementIconType } from "../../constants/achievementsMaster";
 
 type Achievement = {
   id: string;
   name: string;
   description?: string;
-  icon?: React.ReactNode;
+  icon?: AchievementIconType;
 };
-type Props = { achievement: Achievement; isUnlocked: boolean };
+type Props = {
+  achievement: Achievement;
+  isUnlocked: boolean;
+  isExpanded: boolean;
+  onPress: () => void;
+};
+
+/**
+ * アイコンファミリーに応じた適切なコンポーネントを返す
+ */
+const renderIcon = (
+  icon: AchievementIconType | undefined,
+  isUnlocked: boolean
+) => {
+  if (!icon) {
+    return (
+      <FontAwesome
+        name="question"
+        size={48}
+        color={isUnlocked ? "#FFB433" : "#999"}
+      />
+    );
+  }
+
+  const iconColor = isUnlocked ? "#FFB433" : "#999";
+  const iconSize = 48;
+
+  switch (icon.family) {
+    case "FontAwesome":
+      return (
+        <FontAwesome
+          name={icon.name as any}
+          size={iconSize}
+          color={iconColor}
+        />
+      );
+    case "MaterialIcons":
+      return (
+        <MaterialIcons
+          name={icon.name as any}
+          size={iconSize}
+          color={iconColor}
+        />
+      );
+    case "MaterialCommunityIcons":
+      return (
+        <MaterialCommunityIcons
+          name={icon.name as any}
+          size={iconSize}
+          color={iconColor}
+        />
+      );
+    case "Ionicons":
+      return (
+        <Ionicons name={icon.name as any} size={iconSize} color={iconColor} />
+      );
+    default:
+      return <FontAwesome name="question" size={iconSize} color={iconColor} />;
+  }
+};
 
 export const AchievementIcon: React.FC<Props> = ({
   achievement,
   isUnlocked,
-}) => (
-  <View style={[styles.wrap, !isUnlocked && styles.locked]}>
-    <View style={styles.icon}>{achievement.icon || <Text>?</Text>}</View>
-    <Text style={styles.name} numberOfLines={1}>
-      {achievement.name}
-    </Text>
-    {achievement.description ? (
-      <Text style={styles.desc} numberOfLines={2}>
-        {achievement.description}
-      </Text>
-    ) : null}
-  </View>
-);
+  isExpanded,
+  onPress,
+}) => {
+  return (
+    <Pressable onPress={onPress}>
+      <YStack
+        style={[
+          styles.wrap,
+          !isUnlocked && styles.locked,
+          isExpanded && styles.expanded,
+        ]}
+        alignItems="center"
+        gap="$2"
+      >
+        {renderIcon(achievement.icon, isUnlocked)}
+        <Text
+          fontSize={12}
+          fontWeight="700"
+          color={isUnlocked ? "#333" : "#666"}
+          numberOfLines={1}
+          textAlign="center"
+        >
+          {achievement.name}
+        </Text>
+        {isExpanded && achievement.description && (
+          <Text
+            fontSize={12}
+            color="#333"
+            textAlign="center"
+            marginTop="$2"
+            paddingHorizontal="$2"
+          >
+            {achievement.description}
+          </Text>
+        )}
+      </YStack>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
   wrap: {
@@ -35,7 +128,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   locked: { opacity: 0.4 },
-  icon: { marginBottom: 6 },
-  name: { fontWeight: "700", color: "#333" },
-  desc: { fontSize: 12, color: "#666", textAlign: "center", marginTop: 2 },
+  expanded: {
+    backgroundColor: "#FFF5E6",
+    borderWidth: 2,
+    borderColor: "#FFB433",
+  },
 });

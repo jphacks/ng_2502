@@ -5,7 +5,6 @@ import { InputText } from "@/components/ui/InputText";
 import { InputComment } from "@/components/ui/InputComment";
 import { MarkButton } from "@/components/ui/MarkButton";
 import { CircleIcon } from "@/components/ui/CircleIcon";
-import { AchievementIcon } from "@/components/ui/AchievementIcon";
 import { AchievementModal } from "@/components/ui/AchievementModal";
 import { AttentionModal } from "@/components/ui/AttentionModal";
 import { ImageButton } from "@/components/ui/ImageButton";
@@ -15,27 +14,6 @@ export default function HomeScreen() {
   const [isCommentVisible, setIsCommentVisible] = useState(false);
   const [isAchievementVisible, setIsAchievementVisible] = useState(false);
   const [isAttentionVisible, setIsAttentionVisible] = useState(false);
-
-  const mockAchievements = [
-    {
-      id: "welcome_snr",
-      name: "はじめて",
-      description: "SNRを使いはじめたね",
-      icon: <Text style={{ fontSize: 32 }}>🎉</Text>,
-    },
-    {
-      id: "first_post",
-      name: "さいしょの投稿",
-      description: "さいしょの投稿をしたよ",
-      icon: <Text style={{ fontSize: 32 }}>📝</Text>,
-    },
-    {
-      id: "ten_posts",
-      name: "10かい投稿",
-      description: "10かいの投稿をしたよ",
-      icon: <Text style={{ fontSize: 32 }}>⭐</Text>,
-    },
-  ];
 
   const mockUserIcon = require("@/assets/images/partial-react-logo.png");
 
@@ -75,7 +53,13 @@ export default function HomeScreen() {
         <CircleIcon src={mockUserIcon} size={80} />
 
         <Text style={styles.sectionTitle}>バッジコンポーネント</Text>
-        <AchievementIcon achievement={mockAchievements[0]} isUnlocked={true} />
+        <Text style={styles.description}>
+          実績バッジを表示します。🏆ボタンをタップしてモーダルを開けます。
+        </Text>
+        <MarkButton
+          icon={<Text style={styles.buttonIcon}>🏆</Text>}
+          onPress={() => setIsAchievementVisible(true)}
+        />
 
         <Text style={styles.sectionTitle}>Layoutコンポーネント</Text>
         <View style={styles.layoutDemo}>
@@ -116,7 +100,6 @@ export default function HomeScreen() {
       <AchievementModal
         visible={isAchievementVisible}
         onClose={() => setIsAchievementVisible(false)}
-        achievements={mockAchievements}
         unlockedIds={["welcome_snr", "first_post"]}
       />
 
@@ -145,6 +128,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 12,
     color: "#333",
+  },
+  description: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
   },
   buttonIcon: {
     fontSize: 24,
