@@ -19,9 +19,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 from auth.dependencies import get_current_user
 from models.profile import ProfileUpdate  # ← あなたのPydanticモデル
+from config.firebase import db
 
 router = APIRouter()
-db = firestore.client()
 
 # --- プロフィール取得API ---
 @router.get("/profile")

@@ -3,9 +3,9 @@ import asyncio
 from fastapi import APIRouter, Depends
 from firebase_admin import firestore
 from auth.dependencies import get_current_user
+from config.firebase import db
 
 router = APIRouter()
-db = firestore.client()
 
 @router.get("/achievements")
 async def get_achievements(user_id: str = Depends(get_current_user)):

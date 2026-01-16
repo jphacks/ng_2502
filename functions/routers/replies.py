@@ -2,9 +2,9 @@
 import asyncio
 from fastapi import APIRouter, HTTPException
 from firebase_admin import firestore
+from config.firebase import db
 
 router = APIRouter()
-db = firestore.client()
 
 # リプライ取得
 @router.get("/replies/{post_id}")

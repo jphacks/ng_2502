@@ -1,7 +1,7 @@
 # utils/achievements.py
 from firebase_admin import firestore
+from config.firebase import db
 
-db = firestore.client()
 
 ALL_ACHIEVEMENTS = {
     "post_10",
