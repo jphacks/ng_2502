@@ -2,7 +2,7 @@
 import asyncio
 from fastapi import APIRouter, HTTPException
 from firebase_admin import firestore
-from config.firebase import db
+from functions.config.firebase import db
 
 router = APIRouter()
 

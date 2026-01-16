@@ -1,45 +1,42 @@
-# config/firebase.py　初期設定とか
 import firebase_admin
 from firebase_admin import credentials as admin_credentials, firestore as admin_firestore
 import os
-#環境変数導入
 import json
-#文字列で記録できるようにするためにjsonライブラリをインポート
+import tempfile
 
-db = None  # Firestore クライアントをここで共有する
+db = None
 
 def init_firebase():
-    global db#関数の中で変えても外で使えるようにするグローバル変数化
+    global db
 
     cred = None
-    try:
-        # ローカル開発用 firebaseとの接続　秘密鍵
-        cred = admin_credentials.Certificate("serviceAccountKey.json")
-        # serviceAccountKey.json が存在する場合に使用 - プロジェクト直下に置いたserviceAccountKey.json（Firebase の鍵） を読み込む
 
-    except FileNotFoundError:
-        # Render 本番用
+    # 1. ローカルの serviceAccountKey.json を優先
+    if os.path.exists("functions/config/serviceAccountKey.json"):
+        cred = admin_credentials.Certificate("functions/config/serviceAccountKey.json")
+
+    else:
+        # 2. Render 用：環境変数から JSON を取得
         cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-        # 環境変数からサービスアカウントキーを取得
         if cred_json_str:
             cred_info = json.loads(cred_json_str)
-            cred = admin_credentials.Certificate(cred_info)
+
+            # 一時ファイルに書き出す
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
+                tmp.write(json.dumps(cred_info).encode())
+                tmp_path = tmp.name
+
+            cred = admin_credentials.Certificate(tmp_path)
         else:
             print("⚠️ サービスアカウントキーが見つかりません。エミュレータモードで動作します。")
 
-    # Firebase Admin 初期化
-    if cred:
-        try:
-            firebase_admin.initialize_app(cred)
-        except ValueError:
-            pass
-    else:
-        try:
-            firebase_admin.initialize_app()
-        except ValueError:
-            pass
+    # Firebase 初期化
+    try:
+        firebase_admin.initialize_app(cred)
+    except ValueError:
+        pass
 
-    # Firestore クライアント作成
+    # Firestore クライアント
     if os.getenv("FIRESTORE_EMULATOR_HOST"):
         print("🔥 Firestore Emulator に接続しています")
         db = admin_firestore.Client(project="myfirstfirebase-440d6")

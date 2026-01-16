@@ -17,9 +17,9 @@
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
-from auth.dependencies import get_current_user
-from models.profile import ProfileUpdate  # ← あなたのPydanticモデル
-from config.firebase import db
+from functions.auth.dependencies import get_current_user
+from functions.models.profile import ProfileUpdate
+from functions.config.firebase import db
 
 router = APIRouter()
 

@@ -2,9 +2,8 @@
 import asyncio
 from fastapi import APIRouter, Depends
 from firebase_admin import firestore, firestore as admin_firestore
-from auth.dependencies import get_current_user
-from config.firebase import db
-
+from functions.auth.dependencies import get_current_user
+from functions.config.firebase import db
 router = APIRouter()
 
 # --- 投稿一覧取得API ---

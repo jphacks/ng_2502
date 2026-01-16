@@ -5,12 +5,12 @@ import random
 from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore as admin_firestore
 
-from auth.dependencies import get_current_user
-from models.post import PostCreate
-from utils.achievements import count_user_posts, update_achievements
-from config.firebase import db
-from utils.predicted_likes import sample_viral_predicted_likes
-from gemini_utils import (
+from functions.auth.dependencies import get_current_user
+from functions.models.post import PostCreate
+from functions.utils.achievements import count_user_posts, update_achievements
+from functions.config.firebase import db
+from functions.utils.predicted_likes import sample_viral_predicted_likes
+from functions.gemini_utils import (
     validate_and_analyze_post,
     predict_viral,
     generate_controversial_comments,
