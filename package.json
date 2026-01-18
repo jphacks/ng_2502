@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
+    "react-native-render-html": "^6.3.4"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2"
+  }
+}
