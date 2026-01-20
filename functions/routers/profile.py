@@ -19,18 +19,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 from functions.auth.dependencies import get_current_user
 from functions.models.profile import ProfileUpdate
-from functions.config.firebase import db
+import functions.config.firebase as firebase   # ← ここだけ変更
 
 router = APIRouter()
 
-# --- プロフィール取得API ---
 @router.get("/profile")
 async def get_profile(user_id: str = Depends(get_current_user)):
-    """ログインユーザーのプロフィールを取得"""
     loop = asyncio.get_running_loop()
 
     def fetch_user_profile():
-        user_ref = db.collection("users").document(user_id)
+        user_ref = firebase.db.collection("users").document(user_id)
         doc = user_ref.get()
 
         if doc.exists:
@@ -50,15 +48,13 @@ async def get_profile(user_id: str = Depends(get_current_user)):
     return profile_data
 
 
-# --- プロフィール更新API ---
 @router.put("/profile")
 async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
-    """ログインユーザーのプロフィールを更新"""
     loop = asyncio.get_running_loop()
     profile_data = payload.dict()
 
     def write_user_profile():
-        user_ref = db.collection("users").document(user_id)
+        user_ref = firebase.db.collection("users").document(user_id)
         user_ref.set(profile_data, merge=True)
         return user_ref.get().to_dict()
 
