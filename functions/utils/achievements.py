@@ -13,7 +13,7 @@ ALL_ACHIEVEMENTS = {
 }
 
 def count_user_posts(user_id: str):
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    docs = firebase.db.collection("posts").where("userId", "==", user_id).stream()
     return sum(1 for _ in docs)
 
 def update_achievements(user_id: str, post_count: int):
