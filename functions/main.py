@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv 
 #fastapiライブラリから導入
+from functions.config.firebase import init_firebase
 
-from functions.config.firebase import init_firebase, db
 from functions.routers import posts, likes, replies, profile, achievement, post_create
 from functions.auth.dependencies import get_current_user
 from functions.utils.predicted_likes import sample_viral_predicted_likes
@@ -26,7 +26,8 @@ app.add_middleware(
     allow_origins=[
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://myfirstfirebase-440d6.web.app"
+    "https://myfirstfirebase-440d6.web.app",
+    "https://ng-2502testesu.onrender.com"
     ]   ,
     allow_credentials=True,#認証機能を許可
     allow_methods=["*"],    #すべてのHTTPメソッドを許可

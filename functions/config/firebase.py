@@ -2,7 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 import json
-import io
+import tempfile
 
 db = None
 
@@ -20,7 +20,13 @@ def init_firebase():
         cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         if cred_json_str:
             cred_info = json.loads(cred_json_str)
-            cred = credentials.Certificate(cred_info)
+
+            # 一時ファイルに書き出す
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
+                tmp.write(json.dumps(cred_info).encode("utf-8"))
+                tmp_path = tmp.name
+
+            cred = credentials.Certificate(tmp_path)
         else:
             print("⚠️ サービスアカウントキーが見つかりません")
             return
