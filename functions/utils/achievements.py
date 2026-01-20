@@ -1,6 +1,6 @@
 # utils/achievements.py
 from firebase_admin import firestore
-from functions.config.firebase import db
+import functions.config.firebase as firebase
 
 
 ALL_ACHIEVEMENTS = {
@@ -17,7 +17,7 @@ def count_user_posts(user_id: str):
     return sum(1 for _ in docs)
 
 def update_achievements(user_id: str, post_count: int):
-    achievement_ref = db.collection("achievements").document(user_id)
+    achievement_ref = firebase.db.collection("achievements").document(user_id)
     doc = achievement_ref.get()
     existing = doc.to_dict().get("unlocked", []) if doc.exists else []
     achievements = set(existing)
@@ -50,17 +50,17 @@ def update_achievements(user_id: str, post_count: int):
     achievement_ref.set({"unlocked": list(achievements)}, merge=True)
 
 def count_controversial_posts(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).where("isControversial", "==", True).stream()
+    docs = firebase.db.collection("posts").where("userId", "==", user_id).where("isControversial", "==", True).stream()
     return sum(1 for _ in docs)
 
 def count_total_predicted_likes(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    docs = firebase.db.collection("posts").where("userId", "==", user_id).stream()
     return sum(doc.to_dict().get("predictedLikes", 0) for doc in docs)
 
 def count_total_predicted_replies(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).stream()
+    docs = firebase.db.collection("posts").where("userId", "==", user_id).stream()
     return sum(doc.to_dict().get("predictedReplyCount", 0) for doc in docs)
 
 def count_positive_posts(user_id: str) -> int:
-    docs = db.collection("posts").where("userId", "==", user_id).where("isPositive", "==", True).stream()
+    docs = firebase.db.collection("posts").where("userId", "==", user_id).where("isPositive", "==", True).stream()
     return sum(1 for _ in docs)
