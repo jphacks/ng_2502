@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from firebase_admin import firestore, firestore as admin_firestore
 from functions.auth.dependencies import get_current_user
 import functions.config.firebase as firebase
+
 router = APIRouter()
 
 # --- 投稿一覧取得API ---
@@ -13,7 +14,7 @@ async def get_posts(user_id: str = Depends(get_current_user)):
 
     def fetch():
         docs = (
-            db.collection("posts")
+            firebase.db.collection("posts")   # ← 修正
             .where("replyTo", "==", None)
             .where("userId", "==", user_id)
             .order_by("timestamp", direction=admin_firestore.Query.DESCENDING)
@@ -27,12 +28,11 @@ async def get_posts(user_id: str = Depends(get_current_user)):
             post_data["id"] = doc.id
             post_data["predictedLikes"] = post_data.get("predictedLikes", 0)
 
-            # --- ユーザー情報を付与 ---
             user_id_from_post = post_data.get("userId")
 
             if user_id_from_post:
                 try:
-                    user_ref = db.collection("users").document(user_id_from_post)
+                    user_ref = firebase.db.collection("users").document(user_id_from_post)  # ← 修正
                     user_doc = user_ref.get()
 
                     if user_doc.exists:
@@ -58,7 +58,10 @@ async def get_posts(user_id: str = Depends(get_current_user)):
                     "username": "ユーザー名",
                     "iconColor": "blue"
                 }
+
             posts_list.append(post_data)
+
         return posts_list
+
     results = await loop.run_in_executor(None, fetch)
     return results

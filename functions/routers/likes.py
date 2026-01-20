@@ -12,7 +12,7 @@ async def toggle_like(post_id: str, user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
 
     def toggle():
-        post_ref = db.collection("posts").document(post_id)
+        post_ref = firebase.db.collection("posts").document(post_id)
         doc = post_ref.get()
 
         if not doc.exists:

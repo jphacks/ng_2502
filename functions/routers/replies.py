@@ -13,7 +13,7 @@ async def get_replies(post_id: str):
 
     def fetch():
         docs = (
-            db.collection("posts")
+            firebase.db.collection("posts")   # ← 修正ポイント①
             .where("replyTo", "==", post_id)
             .order_by("timestamp")
             .stream()
@@ -29,7 +29,7 @@ async def get_replies(post_id: str):
             user_id = reply_data.get("userId")
             if user_id:
                 try:
-                    user_ref = db.collection("users").document(user_id)
+                    user_ref = firebase.db.collection("users").document(user_id)  # ← 修正ポイント②
                     user_doc = user_ref.get()
 
                     if user_doc.exists:

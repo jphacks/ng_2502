@@ -27,7 +27,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     # ユーザーのモード情報を取得
     loop = asyncio.get_running_loop()
     def get_user_mode():
-        user_ref = db.collection("users").document(user_id)
+        user_ref = firebase.db.collection("users").document(user_id)
         doc = user_ref.get()
         if doc.exists:
             return doc.to_dict().get("mode", "てんさく")
@@ -43,7 +43,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     if is_tensai_mode and not analysis["is_safe"]:
         # NG理由をデータベースに記録してからエラーを返す
         def write_rejected():
-            doc_ref = db.collection("rejected_posts").document()
+            doc_ref = firebase.db.collection("rejected_posts").document()
             doc_ref.set({
                 "userId": user_id,
                 "content": payload.content,
@@ -173,7 +173,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     
     # Firestore書き込み処理
     def write_to_firestore():
-        doc_ref = db.collection("posts").document()
+        doc_ref = firebase.db.collection("posts").document()
         doc_ref.set(new_post_data)
         return doc_ref.id
     
