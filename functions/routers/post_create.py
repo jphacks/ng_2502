@@ -8,7 +8,7 @@ from firebase_admin import firestore as admin_firestore
 from functions.auth.dependencies import get_current_user
 from functions.models.post import PostCreate
 from functions.utils.achievements import count_user_posts, update_achievements
-from functions.config.firebase import db
+import functions.config.firebase as firebase
 from functions.utils.predicted_likes import sample_viral_predicted_likes
 from functions.gemini_utils import (
     validate_and_analyze_post,
