@@ -31,10 +31,11 @@ def init_firebase():
             print("⚠️ サービスアカウントキーが見つかりません")
             return
 
+    # ★ ここが重要：二重初期化を防ぐ
     try:
-        firebase_admin.initialize_app(cred)
+        firebase_admin.get_app()
     except ValueError:
-        pass
+        firebase_admin.initialize_app(cred)
 
     print("🔥 Firestore に接続成功")
     db = firestore.client()
