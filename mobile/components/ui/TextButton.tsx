@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from 'tamagui';
+import React from "react";
+import { Button } from "tamagui";
 
 interface TextButtonProps {
   children: React.ReactNode;
@@ -22,16 +22,16 @@ export const TextButton: React.FC<TextButtonProps> = ({
       backgroundColor="#FFB433"
       color="#FFFFFF"
       borderWidth={0}
-      paddingVertical="$3"
       paddingHorizontal="$4"
       borderRadius="$2"
       fontWeight="600"
-      fontSize="$md"
+      fontSize={16}
       opacity={disabled ? 0.5 : 1}
       $platform-web={{
-        cursor: disabled ? 'not-allowed' : 'pointer',
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
       hoverStyle={{
+        backgroundColor: "#ffb120",
         opacity: 0.8,
       }}
       pressStyle={{
