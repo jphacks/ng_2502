@@ -8,7 +8,7 @@ import { onAuthStateChanged } from "firebase/auth"; // 認証初期化完了を�
 
 // --- 変更点2: バックエンドのAPIサーバーのURLを定義 ---
 // .envファイルで管理するのがベストですが、ここでは直接記述します
-const API_URL = "https://ng-2502testesu.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ListPage = () => {
   // --- 変更点3: postsの初期値を空の配列に、loadingの初期値をtrueに変更 ---

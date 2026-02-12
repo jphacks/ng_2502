@@ -9,33 +9,32 @@ db = None
 def init_firebase():
     global db
 
-    cred = None
+    if os.getenv("ENV") == "local":
+        print("🔥 ローカルモード: Firebase Emulator に接続します")
 
-    # ローカルの serviceAccountKey.json
-    if os.path.exists("functions/config/serviceAccountKey.json"):
+        os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
+        os.environ["FIREBASE_AUTH_EMULATOR_HOST"] = "localhost:9099"
+
         cred = credentials.Certificate("functions/config/serviceAccountKey.json")
 
-    else:
-        # Render の環境変数
-        cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-        if cred_json_str:
-            cred_info = json.loads(cred_json_str)
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            firebase_admin.initialize_app(cred, {
+                "projectId": "myfirstfirebase-440d6"  # ← 本番と同じ ID に統一
+            })
 
-            # 一時ファイルに書き出す
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
-                tmp.write(json.dumps(cred_info).encode("utf-8"))
-                tmp_path = tmp.name
+        db = firestore.client()
+        print("🔥 Firestore Emulator に接続成功")
+        return
 
-            cred = credentials.Certificate(tmp_path)
-        else:
-            print("⚠️ サービスアカウントキーが見つかりません")
-            return
+    # --- 本番 ---
+    cred = credentials.Certificate("functions/config/serviceAccountKey.json")
 
-    # ★ ここが重要：二重初期化を防ぐ
     try:
         firebase_admin.get_app()
     except ValueError:
         firebase_admin.initialize_app(cred)
 
-    print("🔥 Firestore に接続成功")
+    print("🔥 Firestore（本番）に接続成功")
     db = firestore.client()

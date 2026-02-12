@@ -1,10 +1,21 @@
-// Import the functions you need from the SDKs you need
+// --- Firebase SDK ---
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { 
+  getFirestore, 
+  connectFirestoreEmulator 
+} from "firebase/firestore";
+import { 
+  getAuth, 
+  connectAuthEmulator,
+  setPersistence,
+  inMemoryPersistence
+} from "firebase/auth";
+import { 
+  getStorage, 
+  connectStorageEmulator 
+} from "firebase/storage";
 
-// Your web app's Firebase configuration
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,21 +25,30 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// --- Firebase初期化 ---
+// --- Initialize App ---
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// --- 各サービスの取得 ---
+// --- Services ---
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-// --- ローカル実行時のみエミュレーターに接続 ---
-// if (location.hostname === "localhost") {
-//   console.log("🔥 Firebase Emulator に接続中...");
-//   connectFirestoreEmulator(db, "localhost", 8080);
-//   connectAuthEmulator(auth, "http://localhost:9099");
-//   connectStorageEmulator(storage, "localhost", 9199);
-// }
+// --- ローカル開発時だけエミュレーターに接続 ---
+if (import.meta.env.MODE === "development") {
+  console.log("🔥 Firebase Emulator に接続中...");
 
-// --- 他のファイルから使えるようにエクスポート ---
+  // Firestore Emulator
+  connectFirestoreEmulator(db, "localhost", 8080);
+
+  // Auth Emulator
+  connectAuthEmulator(auth, "http://localhost:9099");
+
+  // Storage Emulator
+  connectStorageEmulator(storage, "localhost", 9199);
+
+  // ★ ローカルでは永続化を無効化（戻るボタンで本番アカウントに戻る問題の決定的対策）
+  setPersistence(auth, inMemoryPersistence);
+}
+
+// --- Export ---
 export { app, db, auth, storage };

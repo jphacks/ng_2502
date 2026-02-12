@@ -15,7 +15,7 @@ import { auth } from "../firebase"; // ログインユーザー情報を取得�
 import { NgReason } from "../components/NgReason";
 
 // .envファイルで管理するのがベストですが、ここでは直接記述します
-const API_URL = "https://ng-2502testesu.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 // --- アイコンのインポートと対応表 (変更なし) ---
 import BlueIcon from "../assets/UserIcon_Blue.png";

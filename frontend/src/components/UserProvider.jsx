@@ -3,7 +3,7 @@ import { UserContext } from "../context/UserContext.jsx";
 import { auth } from "../firebase";
 import axios from "axios";
 
-const API_URL = "https://ng-2502testesu.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const UserProvider = ({ children }) => {
   const [email, setEmail] = useState("");
