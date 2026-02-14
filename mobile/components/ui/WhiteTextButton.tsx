@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from 'tamagui';
+import React from "react";
+import { Button } from "tamagui";
 
 interface WhiteTextButtonProps {
   children: React.ReactNode;
@@ -24,17 +24,16 @@ export const WhiteTextButton: React.FC<WhiteTextButtonProps> = ({
       borderColor="#FFB433"
       borderWidth={2}
       borderRadius="$2"
-      paddingVertical="$3"
       paddingHorizontal="$4"
       fontWeight="600"
-      fontSize="$md"
+      fontSize={16}
       opacity={disabled ? 0.5 : 1}
       $platform-web={{
-        cursor: disabled ? 'not-allowed' : 'pointer',
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
       hoverStyle={{
         opacity: 0.8,
-        borderColor: '#c78728',
+        borderColor: "#c78728",
       }}
       pressStyle={{
         opacity: 0.7,
