@@ -19,7 +19,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   return (
     <TamaguiProvider config={config} defaultTheme="light">
-      <PortalProvider>
+      <PortalProvider shouldAddRootHost>
         <ThemeProvider value={DefaultTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
