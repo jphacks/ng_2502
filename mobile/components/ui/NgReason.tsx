@@ -1,5 +1,5 @@
-import { X } from '@tamagui/lucide-icons'; // アイコンを利用する場合
-import { Button, Dialog, XStack, YStack } from 'tamagui';
+import { Feather } from "@expo/vector-icons";
+import { Button, Dialog, XStack, YStack } from "tamagui";
 
 type NgReasonProps = {
   isOpen: boolean;
@@ -34,7 +34,7 @@ export const NgReason = ({ isOpen, onClose, reason = "" }: NgReasonProps) => {
           elevate
           key="content"
           animation={[
-            'quick',
+            "quick",
             {
               opacity: {
                 overshootClamping: true,
@@ -55,16 +55,17 @@ export const NgReason = ({ isOpen, onClose, reason = "" }: NgReasonProps) => {
             <Dialog.Title fontSize="$6" fontWeight="bold">
               このとうこうはよくないよ！
             </Dialog.Title>
-            
+
             {/* 閉じるボタン */}
             <Dialog.Close asChild>
               <Button
                 size="$3"
                 circular
-                icon={X} // @tamagui/lucide-iconsがない場合は <Text>✕</Text> などで代用
                 onPress={onClose}
                 chromeless // 背景色なしのボタンスタイル
-              />
+              >
+                <Feather name="x" size={20} color="#333" />
+              </Button>
             </Dialog.Close>
           </XStack>
 
@@ -78,7 +79,6 @@ export const NgReason = ({ isOpen, onClose, reason = "" }: NgReasonProps) => {
               {reason}
             </Dialog.Description>
           </YStack>
-
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

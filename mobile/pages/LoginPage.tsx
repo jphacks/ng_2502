@@ -35,7 +35,7 @@ const LoginPage = () => {
       // --- ▲▲▲ ここまで追加 ▲▲▲ ---
 
       console.log("✅ ログイン成功:", userCredential.user.email);
-      router.push("/(tabs)"); // ログイン後ページへ
+      router.replace("/(tabs)"); // ログイン後ページへ
     } catch (error) {
       const firebaseError = error as FirebaseError;
       alert("ログインに失敗しました: " + firebaseError.message);
@@ -78,7 +78,7 @@ const LoginPage = () => {
 
       console.log("🚀 /(tabs) へ遷移します");
 
-      router.push("/(tabs)");
+      router.replace("/(tabs)");
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("❌ 新規登録エラー:", error);
@@ -135,6 +135,9 @@ const LoginPage = () => {
       </TextButton>
       <WhiteTextButton onPress={handleRegister} width="55%">
         あたらしくはじめる
+      </WhiteTextButton>
+      <WhiteTextButton onPress={() => router.push("/input")} width="55%">
+        入力画面をひらく
       </WhiteTextButton>
     </YStack>
   );
