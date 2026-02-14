@@ -136,9 +136,6 @@ const LoginPage = () => {
       <WhiteTextButton onPress={handleRegister} width="55%">
         あたらしくはじめる
       </WhiteTextButton>
-      <WhiteTextButton onPress={() => router.push("/input")} width="55%">
-        入力画面をひらく
-      </WhiteTextButton>
     </YStack>
   );
 };
