@@ -11,9 +11,10 @@ import "react-native-reanimated";
 
 import config from "../tamagui.config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { UserProvider } from "@/components/ui/UserProvider";
 
 export const unstable_settings = {
-  anchor: "(tabs)",
+  anchor: "index",
 };
 
 export default function RootLayout() {
@@ -21,14 +22,17 @@ export default function RootLayout() {
     <TamaguiProvider config={config} defaultTheme="light">
       <PortalProvider shouldAddRootHost>
         <ThemeProvider value={DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
+          <UserProvider>
+            <Stack initialRouteName="index">
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="modal"
+                options={{ presentation: "modal", title: "Modal" }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </UserProvider>
         </ThemeProvider>
       </PortalProvider>
     </TamaguiProvider>

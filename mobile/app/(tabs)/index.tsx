@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Header } from "@/components/ui/Header";
-import { InputText } from "@/components/ui/InputText";
-import { InputComment } from "@/components/ui/InputComment";
-import { MarkButton } from "@/components/ui/MarkButton";
-import { CircleIcon } from "@/components/ui/CircleIcon";
 import { AchievementModal } from "@/components/ui/AchievementModal";
 import { AttentionModal } from "@/components/ui/AttentionModal";
+import { CircleIcon } from "@/components/ui/CircleIcon";
+import { Header } from "@/components/ui/Header";
 import { ImageButton } from "@/components/ui/ImageButton";
+import { InputComment } from "@/components/ui/InputComment";
+import { InputText } from "@/components/ui/InputText";
 import Layout from "@/components/ui/Layout";
+import { MarkButton } from "@/components/ui/MarkButton";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
   const [isCommentVisible, setIsCommentVisible] = useState(false);

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from 'tamagui';
+import React from "react";
+import { Button } from "tamagui";
 
 interface ProfileButtonProps {
   isActive?: boolean;
@@ -19,8 +19,8 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
   // isActiveがtrue、または、isActiveが指定されなかった(undefined)場合にオレンジにする
   const isButtonActive = isActive === true || isActive === undefined;
 
-  const bgColor = isButtonActive ? '#FFB433' : '#E2E8F0';
-  const textColor = isButtonActive ? '#FFFFFF' : '#718096';
+  const bgColor = isButtonActive ? "#FFB433" : "#E2E8F0";
+  const textColor = isButtonActive ? "#FFFFFF" : "#718096";
 
   return (
     <Button
@@ -34,10 +34,10 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
       paddingHorizontal="$4"
       borderRadius="$2"
       fontWeight="600"
-      fontSize="$md"
+      fontSize="$4"
       opacity={disabled ? 0.5 : 1}
       $platform-web={{
-        cursor: disabled ? 'not-allowed' : 'pointer',
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
       hoverStyle={{
         opacity: 0.8,
