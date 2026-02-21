@@ -10,6 +10,7 @@ import asyncio
 from dotenv import load_dotenv 
 import os
 import json
+import dm
 
 # --- 変更点1: firebase_admin関連のインポートを追加 ---
 import firebase_admin
@@ -28,6 +29,8 @@ from gemini_utils import (
 
 app = FastAPI()
 load_dotenv()
+
+app.include_router(dm.router)
 
 # --- CORSミドルウェアの設定 (変更なし) ---
 origins = [
