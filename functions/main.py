@@ -3,6 +3,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv 
+from pathlib import Path
 #fastapiライブラリから導入
 from functions.config.firebase import init_firebase
 
@@ -13,7 +14,8 @@ from functions.utils.predicted_likes import sample_viral_predicted_likes
 #from自分のファイル名　import関数名
 #configフォルダ内のfirebase.pyからinit_firebase関数をインポート
 
-load_dotenv()
+# functions/.env ファイルを明示的に読み込む
+load_dotenv(Path(__file__).parent / ".env")
 
 app = FastAPI()
 #FastAPIインスタンスを作成

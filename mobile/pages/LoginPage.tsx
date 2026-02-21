@@ -12,6 +12,7 @@ import { FirebaseError } from "firebase/app";
 import { auth } from "../firebase";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LoginPage = () => {
   const { email, setEmail } = useUser();
@@ -30,8 +31,7 @@ const LoginPage = () => {
       // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
       // ログイン成功後、IDトークンを取得
       const idToken = await userCredential.user.getIdToken();
-      // localStorageにIDトークンを保存
-      localStorage.setItem("firebaseIdToken", idToken);
+      await AsyncStorage.setItem("firebaseIdToken", idToken);
       // --- ▲▲▲ ここまで追加 ▲▲▲ ---
 
       console.log("✅ ログイン成功:", userCredential.user.email);
@@ -67,7 +67,7 @@ const LoginPage = () => {
       console.log("🔑 IDトークン取得成功");
 
       console.log("💾 IDトークン保存中...");
-      localStorage.setItem("firebaseIdToken", idToken);
+      await AsyncStorage.setItem("firebaseIdToken", idToken);
       console.log("💾 IDトークン保存完了");
 
       console.log("🆕 新規登録成功:", userCredential.user.email);
