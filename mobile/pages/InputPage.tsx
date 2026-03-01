@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from "react";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import { Image, StyleSheet } from "react-native";
 import { Button, Text, XStack, YStack } from "tamagui";
-import { useRouter } from "expo-router";
+import { NgReason } from "../components/ui/NgReason";
+import { PostInput } from "../components/ui/PostInput";
+import { ProfileIcon } from "../components/ui/ProfileIcon";
+import { WhiteTextButton } from "../components/ui/WhiteTextButton";
 import { auth } from "../firebase";
 import { useUser } from "../hooks/useUser";
-import { ProfileIcon } from "../components/ui/ProfileIcon";
-import { PostInput } from "../components/ui/PostInput";
-import { WhiteTextButton } from "../components/ui/WhiteTextButton";
-import { NgReason } from "../components/ui/NgReason";
-import { Feather } from "@expo/vector-icons";
 
 const API_URL = "https://ng-2502testesu.onrender.com";
 

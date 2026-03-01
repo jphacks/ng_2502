@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
-import { YStack, Text } from "tamagui";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
-import { Post } from "../components/ui/Post";
+import { useEffect, useState } from "react";
+import { ActivityIndicator } from "react-native";
+import { Text, YStack } from "tamagui";
 import { Header } from "../components/ui/Header";
+import { Post } from "../components/ui/Post";
+import { auth } from "../firebase";
 
 const API_URL = "https://ng-2502testesu.onrender.com";
 

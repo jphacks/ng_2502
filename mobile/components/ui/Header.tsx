@@ -1,12 +1,12 @@
+import { FontAwesome } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { XStack, Text, Image } from "tamagui";
 import { Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { Image, Text, XStack } from "tamagui";
+import { AchievementModal } from "./AchievementModal";
 import { CircleIcon } from "./CircleIcon";
 import { MarkButton } from "./MarkButton";
-import { AchievementModal } from "./AchievementModal";
-import { FontAwesome } from "@expo/vector-icons";
 
 // アイコンマッピング（React Nativeではrequireを使用）
 const iconMap = {

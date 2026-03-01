@@ -1,32 +1,32 @@
-import React, { useState } from 'react';
-import { YStack, XStack, Text, View, Separator } from 'tamagui';
-import { useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
-import { CircleIcon } from './CircleIcon';
-import BlueIcon from '../../assets/images/UserIcon_Blue.png';
-import CreamIcon from '../../assets/images/UserIcon_Cream.png';
-import GreenIcon from '../../assets/images/UserIcon_Green.png';
-import MintIcon from '../../assets/images/UserIcon_Mint.png';
-import NavyIcon from '../../assets/images/UserIcon_Navy.png';
-import OliveIcon from '../../assets/images/UserIcon_Olive.png';
-import PurpleIcon from '../../assets/images/UserIcon_Purple.png';
-import RedIcon from '../../assets/images/UserIcon_Red.png';
-import YellowIcon from '../../assets/images/UserIcon_Yellow.png';
-import { InputComment } from './InputComment';
-import { FontAwesome6 } from '@expo/vector-icons';
-import { useUser } from '../../hooks/useUser';
-import type { GestureResponderEvent } from 'react-native';
+import { FontAwesome6 } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import type { GestureResponderEvent } from "react-native";
+import { Pressable } from "react-native";
+import { Separator, Text, View, XStack, YStack } from "tamagui";
+import BlueIcon from "../../assets/images/UserIcon_Blue.png";
+import CreamIcon from "../../assets/images/UserIcon_Cream.png";
+import GreenIcon from "../../assets/images/UserIcon_Green.png";
+import MintIcon from "../../assets/images/UserIcon_Mint.png";
+import NavyIcon from "../../assets/images/UserIcon_Navy.png";
+import OliveIcon from "../../assets/images/UserIcon_Olive.png";
+import PurpleIcon from "../../assets/images/UserIcon_Purple.png";
+import RedIcon from "../../assets/images/UserIcon_Red.png";
+import YellowIcon from "../../assets/images/UserIcon_Yellow.png";
+import { useUser } from "../../hooks/useUser";
+import { CircleIcon } from "./CircleIcon";
+import { InputComment } from "./InputComment";
 
 const iconMap = {
-  blue: { src: BlueIcon, alt: 'Blue Icon' },
-  cream: { src: CreamIcon, alt: 'Cream Icon' },
-  green: { src: GreenIcon, alt: 'Green Icon' },
-  mint: { src: MintIcon, alt: 'Mint Icon' },
-  navy: { src: NavyIcon, alt: 'Navy Icon' },
-  olive: { src: OliveIcon, alt: 'Olive Icon' },
-  purple: { src: PurpleIcon, alt: 'Purple Icon' },
-  red: { src: RedIcon, alt: 'Red Icon' },
-  yellow: { src: YellowIcon, alt: 'Yellow Icon' },
+  blue: { src: BlueIcon, alt: "Blue Icon" },
+  cream: { src: CreamIcon, alt: "Cream Icon" },
+  green: { src: GreenIcon, alt: "Green Icon" },
+  mint: { src: MintIcon, alt: "Mint Icon" },
+  navy: { src: NavyIcon, alt: "Navy Icon" },
+  olive: { src: OliveIcon, alt: "Olive Icon" },
+  purple: { src: PurpleIcon, alt: "Purple Icon" },
+  red: { src: RedIcon, alt: "Red Icon" },
+  yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
 interface PostProps {
@@ -60,9 +60,9 @@ const Post: React.FC<PostProps> = ({
 
   if (!post) return null;
 
-  const safeUser = post.user || { username: 'ユーザー名', iconColor: 'blue' };
-  const iconKey = safeUser.iconColor || 'blue'; 
-const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
+  const safeUser = post.user || { username: "ユーザー名", iconColor: "blue" };
+  const iconKey = safeUser.iconColor || "blue";
+  const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
 
   const handleLikeClick = (e: GestureResponderEvent) => {
     e.preventDefault?.();
@@ -72,9 +72,9 @@ const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
 
   const handlePostClick = () => {
     if (!isComment && post?.id) {
-      router.push({ 
-        pathname: '/post-detail' as any, 
-        params: { postId: post.id } 
+      router.push({
+        pathname: "/post-detail" as any,
+        params: { postId: post.id },
       });
     }
   };
@@ -89,8 +89,8 @@ const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
         <XStack space="$2" alignItems="center">
           <CircleIcon src={src} alt={alt} />
           <YStack alignItems="flex-start" space="$0">
-            <Text fontWeight="bold" fontSize="$md">
-              {safeUser.username || 'ユーザー名'}
+            <Text fontWeight="bold" fontSize="$4">
+              {safeUser.username || "ユーザー名"}
             </Text>
           </YStack>
         </XStack>
@@ -104,14 +104,18 @@ const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
         <XStack justifyContent="flex-end" space="$1">
           <XStack space="$1" alignItems="center">
             <Pressable onPress={handleLikeClick}>
-              <FontAwesome6 name="heart" size={20} color={isLiked ? '#d32f2f' : '#999'} />
+              <FontAwesome6
+                name="heart"
+                size={20}
+                color={isLiked ? "#d32f2f" : "#999"}
+              />
             </Pressable>
-            {typeof post.predictedLikes === 'number' && !isComment && (
-              <Text 
-                fontSize="$md" 
-                color="#80CBC4" 
-                fontFamily="monospace" 
-                minWidth="$8" 
+            {typeof post.predictedLikes === "number" && !isComment && (
+              <Text
+                fontSize="$4"
+                color="#80CBC4"
+                fontFamily="monospace"
+                minWidth="$8"
                 textAlign="center"
               >
                 {post.predictedLikes}
@@ -134,9 +138,9 @@ const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
       </YStack>
 
       <InputComment
-        visible={showCommentInput}      // isOpen -> visible
+        visible={showCommentInput} // isOpen -> visible
         onClose={() => setShowCommentInput(false)}
-        onSubmit={onCommentSubmit}      // onCommentSubmit -> onSubmit
+        onSubmit={onCommentSubmit} // onCommentSubmit -> onSubmit
       />
     </Pressable>
   );
