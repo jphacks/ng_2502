@@ -5,13 +5,13 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { auth } from "../firebase";
 import { useState } from "react";
 import { Image } from "react-native";
 import { YStack } from "tamagui";
 import { InputText } from "../components/ui/InputText";
 import { TextButton } from "../components/ui/TextButton";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LoginPage = () => {
