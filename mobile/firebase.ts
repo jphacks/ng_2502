@@ -28,14 +28,19 @@ const auth = initializeAuth(app, {
 
 const storage = getStorage(app);
 
-if (__DEV__) {
+const useFirebaseEmulator =
+  __DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR !== "false";
+
+if (useFirebaseEmulator) {
   console.log("🔥 Firebase Emulator に接続中...");
 
   const PC_IP = "192.168.68.107";
 
   try {
     connectFirestoreEmulator(db, PC_IP, 8080);
-    connectAuthEmulator(auth, `http://${PC_IP}:9099`);
+    connectAuthEmulator(auth, `http://${PC_IP}:9099`, {
+      disableWarnings: true,
+    });
     connectStorageEmulator(storage, PC_IP, 9199);
     console.log("✅ エミュレータ接続設定が完了しました");
   } catch (error) {

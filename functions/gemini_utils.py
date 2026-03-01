@@ -20,6 +20,10 @@ except Exception as e:
     print(f"Geminiモデルの初期化に失敗しました: {e}")
     gemini_model = None
 
+
+def _is_local_dev() -> bool:
+    return os.getenv("ENV") == "local"
+
 # --- 関数定義 ---
 
 async def validate_and_analyze_post(text: str, require_safety_check: bool = True) -> dict:
@@ -41,6 +45,16 @@ async def validate_and_analyze_post(text: str, require_safety_check: bool = True
     }
     """
     if not gemini_model:
+        if _is_local_dev():
+            return {
+                "is_safe": True,
+                "safety_reason": "",
+                "is_positive": True,
+                "reply_count": 3,
+                "reaction_types": ["positive", "neutral", "neutral"],
+                "predicted_likes": 3,
+                "is_controversial": False
+            }
         return {
             "is_safe": False,
             "safety_reason": "AIモデルが初期化されていません。",
@@ -189,6 +203,16 @@ async def validate_and_analyze_post(text: str, require_safety_check: bool = True
     except Exception as e:
         print(f"統合分析エラー: {e}")
         # エラー時のデフォルト値
+        if _is_local_dev():
+            return {
+                "is_safe": True,
+                "safety_reason": "",
+                "is_positive": True,
+                "reply_count": 3,
+                "reaction_types": ["positive", "neutral", "neutral"],
+                "predicted_likes": 3,
+                "is_controversial": False
+            }
         if require_safety_check:
             return {
                 "is_safe": False,

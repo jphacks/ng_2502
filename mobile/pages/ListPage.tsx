@@ -1,12 +1,11 @@
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, ScrollView } from "react-native";
 import { Text, YStack } from "tamagui";
 import { Header } from "../components/ui/Header";
 import { Post } from "../components/ui/Post";
+import { API_BASE_URL } from "../constants/api";
 import { auth } from "../firebase";
-
-const API_URL = "https://ng-2502testesu.onrender.com";
 
 type IconColor =
   | "blue"
@@ -43,7 +42,7 @@ const ListPage = () => {
       setLoading(true);
       try {
         const token = await user.getIdToken();
-        const response = await fetch(`${API_URL}/posts`, {
+        const response = await fetch(`${API_BASE_URL}/posts`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -100,12 +99,17 @@ const ListPage = () => {
           </Text>
         </YStack>
       ) : (
-        posts.map((post, index) => (
-          <Post
-            key={post.id ?? `${post.userId ?? "anon"}-${index}`}
-            post={post}
-          />
-        ))
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 12 }}
+        >
+          {posts.map((post, index) => (
+            <Post
+              key={post.id ?? `${post.userId ?? "anon"}-${index}`}
+              post={post}
+            />
+          ))}
+        </ScrollView>
       )}
     </YStack>
   );
