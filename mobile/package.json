@@ -19,7 +19,7 @@
     "@tamagui/config": "1.144.1",
     "@tamagui/core": "1.144.1",
     "@tamagui/portal": "1.144.1",
-    "axios": "^1.13.5",
+    "axios": "^1.13.6",
     "expo": "~54.0.31",
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.11",

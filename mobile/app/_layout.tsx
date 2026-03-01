@@ -25,6 +25,13 @@ export default function RootLayout() {
           <UserProvider>
             <Stack initialRouteName="index">
               <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="input" options={{ headerShown: false }} />
+              <Stack.Screen name="profile" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="post-detail"
+                options={{ headerShown: false }}
+              />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="modal"

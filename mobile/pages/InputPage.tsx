@@ -2,15 +2,15 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Image, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Text, XStack, YStack } from "tamagui";
 import { NgReason } from "../components/ui/NgReason";
 import { PostInput } from "../components/ui/PostInput";
 import { ProfileIcon } from "../components/ui/ProfileIcon";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
+import { API_BASE_URL } from "../constants/api";
 import { auth } from "../firebase";
 import { useUser } from "../hooks/useUser";
-
-const API_URL = "https://ng-2502testesu.onrender.com";
 
 const iconMap = {
   blue: require("../assets/images/UserIcon_Blue.png"),
@@ -30,6 +30,7 @@ const InputPage = () => {
   const [isNgOpen, setIsNgOpen] = useState(false);
   const [ngReason, setNgReason] = useState("");
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { iconColor } = useUser();
 
   const iconUri = useMemo(() => {
@@ -48,7 +49,7 @@ const InputPage = () => {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/post`, {
+      const response = await fetch(`${API_BASE_URL}/post`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +85,7 @@ const InputPage = () => {
 
       const data = await response.json();
       console.log("✅ 投稿成功:", data);
-      router.push("/(tabs)");
+      router.push("/(tabs)/list");
     } catch (error) {
       setIsSubmitting(false);
       const err = error as {
@@ -106,10 +107,10 @@ const InputPage = () => {
   };
 
   return (
-    <YStack style={styles.container}>
+    <YStack style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <XStack justifyContent="space-between" alignItems="center" mb="$3">
         <WhiteTextButton
-          onPress={() => router.push("/list")}
+          onPress={() => router.push("/(tabs)/list")}
           accessibilityLabel="やめる"
         >
           <Feather name="x" size={20} color="#FFB433" />

@@ -41,14 +41,16 @@ interface PostProps {
   isComment?: boolean;
   isAiComment?: boolean;
   currentUserId?: string;
+  disablePostNavigation?: boolean;
 }
 
 const Post: React.FC<PostProps> = ({
   post,
-  onCommentSubmit = () => {},
+  onCommentSubmit,
   isComment = false,
   isAiComment = false,
   currentUserId,
+  disablePostNavigation = false,
 }) => {
   const router = useRouter();
   const { email } = useUser();
@@ -57,6 +59,7 @@ const Post: React.FC<PostProps> = ({
 
   const [isLiked, setIsLiked] = useState(isOwnPost ? true : false);
   const [showCommentInput, setShowCommentInput] = useState(false);
+  const hasCommentSubmit = typeof onCommentSubmit === "function";
 
   if (!post) return null;
 
@@ -71,15 +74,22 @@ const Post: React.FC<PostProps> = ({
   };
 
   const handlePostClick = () => {
-    if (!isComment && post?.id) {
+    if (!disablePostNavigation && !isComment && post?.id) {
       router.push({
         pathname: "/post-detail" as any,
-        params: { postId: post.id },
+        params: { postId: post.id, post: JSON.stringify(post) },
       });
     }
   };
 
   const handleCommentClick = () => {
+    if (!isComment && post?.id && !hasCommentSubmit) {
+      router.push({
+        pathname: "/post-detail" as any,
+        params: { postId: post.id, post: JSON.stringify(post), openComment: "true" },
+      });
+      return;
+    }
     setShowCommentInput(!showCommentInput);
   };
 
@@ -96,7 +106,7 @@ const Post: React.FC<PostProps> = ({
         </XStack>
 
         <View pl="$12">
-          <Text fontSize="$lg" color="$gray900">
+          <Text fontSize="$5" color="$gray900">
             {post.content}
           </Text>
         </View>
@@ -126,7 +136,7 @@ const Post: React.FC<PostProps> = ({
           {!isComment && (
             <View ml="$4">
               <Pressable onPress={handleCommentClick}>
-                <Text fontSize="$sm" color="$gray600">
+                <Text fontSize="$3" color="$gray600">
                   💬
                 </Text>
               </Pressable>
@@ -140,7 +150,7 @@ const Post: React.FC<PostProps> = ({
       <InputComment
         visible={showCommentInput} // isOpen -> visible
         onClose={() => setShowCommentInput(false)}
-        onSubmit={onCommentSubmit} // onCommentSubmit -> onSubmit
+        onSubmit={onCommentSubmit ?? (() => {})} // onCommentSubmit -> onSubmit
       />
     </Pressable>
   );

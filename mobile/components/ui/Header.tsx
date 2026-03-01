@@ -7,6 +7,7 @@ import { Image, Text, XStack } from "tamagui";
 import { AchievementModal } from "./AchievementModal";
 import { CircleIcon } from "./CircleIcon";
 import { MarkButton } from "./MarkButton";
+import Tutorial from "./Tutorial";
 
 // アイコンマッピング（React Nativeではrequireを使用）
 const iconMap = {
@@ -74,6 +75,7 @@ export const Header: React.FC<Props> = ({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isAchievementVisible, setIsAchievementVisible] = useState(false);
+  const [isTutorialVisible, setIsTutorialVisible] = useState(false);
 
   // iconColorが指定されている場合はiconMapから取得、iconSrcが指定されている場合はそれを使用
   const { src, alt } =
@@ -87,7 +89,7 @@ export const Header: React.FC<Props> = ({
       return;
     }
 
-    router.push("/list");
+    router.push("/(tabs)/list");
   };
 
   const handleCreatePress = () => {
@@ -97,6 +99,24 @@ export const Header: React.FC<Props> = ({
     }
 
     router.push("/input");
+  };
+
+  const handleProfilePress = () => {
+    if (onPressProfile) {
+      onPressProfile();
+      return;
+    }
+
+    router.push("/profile");
+  };
+
+  const handleTutorialPress = () => {
+    if (onPressTutorial) {
+      onPressTutorial();
+      return;
+    }
+
+    setIsTutorialVisible(true);
   };
 
   return (
@@ -111,7 +131,7 @@ export const Header: React.FC<Props> = ({
         position="relative"
       >
         <XStack alignItems="center" gap="$2">
-          <Pressable onPress={onPressProfile}>
+          <Pressable onPress={handleProfilePress}>
             <CircleIcon src={src} alt={alt} />
           </Pressable>
           <MarkButton
@@ -144,7 +164,7 @@ export const Header: React.FC<Props> = ({
                 ?
               </Text>
             }
-            onPress={onPressTutorial}
+            onPress={handleTutorialPress}
           />
           <MarkButton
             icon={
@@ -160,6 +180,10 @@ export const Header: React.FC<Props> = ({
         visible={isAchievementVisible}
         onClose={() => setIsAchievementVisible(false)}
         unlockedIds={unlockedIds}
+      />
+      <Tutorial
+        isOpen={isTutorialVisible}
+        onClose={() => setIsTutorialVisible(false)}
       />
     </>
   );

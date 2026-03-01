@@ -3,19 +3,20 @@ import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, H4, Separator, Spinner, Text, View, YStack } from "tamagui";
 
 // ※パスはプロジェクトの構成に合わせて調整してください（@/ を使った絶対パスを想定）
 import { InputComment } from "@/components/ui/InputComment";
 import { NgReason } from "@/components/ui/NgReason";
 import { Post } from "@/components/ui/Post";
+import { API_BASE_URL } from "@/constants/api";
 import { auth } from "@/firebase";
 import { useUser } from "@/hooks/useUser";
 
-const API_URL = "https://ng-2502testesu.onrender.com";
-
 export default function PostPage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams(); // 変更点: Expo Routerのパラメータ取得
 
   // 変更点: Expo Routerは文字列でパラメータを渡すため、JSON.parseで復元する
@@ -41,7 +42,7 @@ export default function PostPage() {
       setIsLoadingComments(true);
       try {
         const response = await axios.get(
-          `${API_URL}/replies/${mainPostData.id}`,
+          `${API_BASE_URL}/replies/${mainPostData.id}`,
         );
         setComments(response.data || []);
       } catch (error) {
@@ -74,7 +75,12 @@ export default function PostPage() {
     };
 
     try {
-      const response = await axios.post(`${API_URL}/post`, commentPayload);
+      const token = await user.getIdToken();
+      const response = await axios.post(`${API_BASE_URL}/post`, commentPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const newCommentForState = {
         id: response.data.postId,
@@ -111,7 +117,7 @@ export default function PostPage() {
   return (
     // 変更点: スマホ用にScrollViewで全体を囲む。背景色は白(#fff)など。
     <ScrollView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <YStack padding="$4" space="$4">
+      <YStack padding="$4" paddingTop={insets.top + 8} space="$4">
         {/* 戻るボタン */}
         <View alignSelf="flex-start">
           <Button
@@ -127,7 +133,11 @@ export default function PostPage() {
         {/* メイン投稿の表示 */}
         {mainPostData ? (
           <>
-            <Post post={mainPostData} onCommentSubmit={handleCommentSubmit} />
+            <Post
+              post={mainPostData}
+              onCommentSubmit={handleCommentSubmit}
+              disablePostNavigation={true}
+            />
             <InputComment
               visible={isCommentOpen}
               onClose={() => setIsCommentOpen(false)}
@@ -226,8 +236,8 @@ export default function PostPage() {
 
               {/* 通常のコメントの表示 */}
               {comments.length === 0 &&
-              (!mainPostData?.aiComments ||
-                mainPostData.aiComments.length === 0) ? (
+                (!mainPostData?.aiComments ||
+                  mainPostData.aiComments.length === 0) ? (
                 <Text color="$gray10">まだコメントはありません。</Text>
               ) : (
                 comments.map((comment) => (

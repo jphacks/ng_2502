@@ -2,9 +2,11 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spinner, Text, View, XStack, YStack } from "tamagui";
 
 import { auth } from "@/firebase";
+import { API_BASE_URL } from "@/constants/api";
 import { useUser } from "@/hooks/useUser";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -52,8 +54,6 @@ type IconColor =
   | "red"
   | "yellow";
 
-const API_URL = "https://ng-2502testesu.onrender.com";
-
 export default function ProfilePage() {
   const {
     username: globalUsername,
@@ -63,6 +63,7 @@ export default function ProfilePage() {
   } = useUser();
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [localUsername, setLocalUsername] = useState(globalUsername ?? "");
   const [localIconColor, setLocalIconColor] = useState(
@@ -93,7 +94,7 @@ export default function ProfilePage() {
 
       try {
         const idToken = await user.getIdToken();
-        const response = await axios.get(`${API_URL}/profile`, {
+        const response = await axios.get(`${API_BASE_URL}/profile`, {
           headers: { Authorization: `Bearer ${idToken}` },
         });
 
@@ -133,7 +134,7 @@ export default function ProfilePage() {
 
     try {
       const idToken = await user.getIdToken();
-      const response = await axios.put(`${API_URL}/profile`, profileData, {
+      const response = await axios.put(`${API_BASE_URL}/profile`, profileData, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
 
@@ -143,7 +144,7 @@ export default function ProfilePage() {
       setGlobalIconColor(localIconColor);
 
       Alert.alert("成功", "プロフィールを保存しました");
-      router.back(); // 完了したら一覧画面などへ戻る
+      router.replace("/(tabs)/list"); // 完了後は一覧画面へ遷移
     } catch (error: any) {
       console.error("🔥 プロフィールの更新に失敗しました:", error);
       Alert.alert("保存エラー", error.response?.data?.detail || error.message);
@@ -169,6 +170,7 @@ export default function ProfilePage() {
     <ScrollView style={{ flex: 1, backgroundColor: "#fff" }}>
       <YStack
         padding="$4"
+        paddingTop={insets.top + 16}
         space="$8"
         maxWidth={800}
         alignSelf="center"

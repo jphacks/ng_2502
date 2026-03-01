@@ -5,13 +5,13 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { auth } from "../firebase";
 import { useState } from "react";
 import { Image } from "react-native";
 import { YStack } from "tamagui";
 import { InputText } from "../components/ui/InputText";
 import { TextButton } from "../components/ui/TextButton";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LoginPage = () => {
@@ -35,7 +35,7 @@ const LoginPage = () => {
       // --- ▲▲▲ ここまで追加 ▲▲▲ ---
 
       console.log("✅ ログイン成功:", userCredential.user.email);
-      router.replace("/(tabs)"); // ログイン後ページへ
+      router.replace("/(tabs)/list"); // ログイン後ページへ
     } catch (error) {
       const firebaseError = error as FirebaseError;
       alert("ログインに失敗しました: " + firebaseError.message);
@@ -76,9 +76,9 @@ const LoginPage = () => {
       console.log("⏳ 認証の初期化を待機中...");
       await new Promise((resolve) => setTimeout(resolve, 1000)); // 1秒待つ
 
-      console.log("🚀 /(tabs) へ遷移します");
+      console.log("🚀 /profile へ遷移します");
 
-      router.replace("/(tabs)");
+      router.replace("/profile");
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("❌ 新規登録エラー:", error);
