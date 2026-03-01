@@ -20,7 +20,7 @@ import axios from "axios"; // axiosをインポート
 import { auth } from "../firebase"; // ログインユーザー情報を取得
 
 // FastAPIサーバーのURL
-const API_URL = "https://ng-2502testesu.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PostPage = () => {
   const location = useLocation();

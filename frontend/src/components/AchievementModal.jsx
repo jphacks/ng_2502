@@ -21,7 +21,7 @@ import { ACHIEVEMENTS_MASTER } from "../constants/achievementsMaster"; // ステ
 
 // 本番環境では VITE_API_URL を使い、
 // ローカル開発環境では（|| の右側） "http://localhost:8000" を使う
-const API_URL = "https://ng-2502testesu.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * 実績一覧をAPIから取得して表示するモーダルコンポーネント
