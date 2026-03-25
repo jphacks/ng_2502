@@ -23,6 +23,7 @@ type PostItem = {
   userId?: string;
   user?: { username?: string; iconColor?: IconColor };
   content: string;
+  imageUrl?: string | null;
   predictedLikes?: number;
 };
 

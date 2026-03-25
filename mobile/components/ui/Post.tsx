@@ -2,7 +2,7 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import type { GestureResponderEvent } from "react-native";
-import { Pressable } from "react-native";
+import { Image, Pressable } from "react-native";
 import { Separator, Text, View, XStack, YStack } from "tamagui";
 import BlueIcon from "../../assets/images/UserIcon_Blue.png";
 import CreamIcon from "../../assets/images/UserIcon_Cream.png";
@@ -35,6 +35,7 @@ interface PostProps {
     userId?: string;
     user?: { username?: string; iconColor?: keyof typeof iconMap };
     content: string;
+    imageUrl?: string | null;
     predictedLikes?: number;
   };
   onCommentSubmit?: (text: string) => void;
@@ -86,7 +87,11 @@ const Post: React.FC<PostProps> = ({
     if (!isComment && post?.id && !hasCommentSubmit) {
       router.push({
         pathname: "/post-detail" as any,
-        params: { postId: post.id, post: JSON.stringify(post), openComment: "true" },
+        params: {
+          postId: post.id,
+          post: JSON.stringify(post),
+          openComment: "true",
+        },
       });
       return;
     }
@@ -109,6 +114,14 @@ const Post: React.FC<PostProps> = ({
           <Text fontSize="$5" color="$gray900">
             {post.content}
           </Text>
+          {post.imageUrl && (
+            <YStack mt="$3" borderRadius="$2" overflow="hidden">
+              <Image
+                source={{ uri: post.imageUrl }}
+                style={{ width: "100%", height: 200, borderRadius: 8 }}
+              />
+            </YStack>
+          )}
         </View>
 
         <XStack justifyContent="flex-end" space="$1">
