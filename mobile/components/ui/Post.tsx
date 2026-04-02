@@ -95,8 +95,8 @@ const Post: React.FC<PostProps> = ({
 
   return (
     <Pressable onPress={isComment ? undefined : handlePostClick}>
-      <YStack space="$4" p="$3" backgroundColor="$background">
-        <XStack space="$2" alignItems="center">
+      <YStack space="$4" backgroundColor="$background">
+        <XStack space="$2" marginTop="$2" alignItems="center">
           <CircleIcon src={src} alt={alt} />
           <YStack alignItems="flex-start" space="$0">
             <Text fontWeight="bold" fontSize="$4">
@@ -144,7 +144,7 @@ const Post: React.FC<PostProps> = ({
           )}
         </XStack>
 
-        <Separator borderColor="#80CBC4" />
+        {isComment && <Separator borderColor="#ffb433" />}
       </YStack>
 
       <InputComment
