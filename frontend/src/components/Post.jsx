@@ -5,6 +5,7 @@ import {
   Box,
   Divider,
   useDisclosure,
+  Link,
 } from "@chakra-ui/react";
 import { CircleIcon } from "./CircleIcon";
 import BlueIcon from "../assets/UserIcon_Blue.png";
@@ -34,6 +35,30 @@ const iconMap = {
   purple: { src: PurpleIcon, alt: "Purple Icon" },
   red: { src: RedIcon, alt: "Red Icon" },
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
+};
+
+// URLを検出してクリック可能にするヘルパー関数
+const renderTextWithLinks = (text) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <Link
+          key={index}
+          href={part}
+          isExternal
+          color="blue.500"
+          textDecoration="underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </Link>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
 };
 
 const Post = ({
@@ -96,10 +121,9 @@ const Post = ({
         </HStack>
         <Box pl={{ base: "48px", md: "52px" }}>
           {isAiComment ? (
-            <div
-              className="text-base md:text-lg"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            <Text fontSize={{ base: "md", md: "lg" }}>
+              {renderTextWithLinks(post.content)}
+            </Text>
           ) : (
             <Text fontSize={{ base: "md", md: "lg" }}>{post.content}</Text>
           )}

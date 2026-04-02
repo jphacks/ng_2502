@@ -2,7 +2,7 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import type { GestureResponderEvent } from "react-native";
-import { Pressable } from "react-native";
+import { Pressable, Linking } from "react-native";
 import { Separator, Text, View, XStack, YStack } from "tamagui";
 import BlueIcon from "../../assets/images/UserIcon_Blue.png";
 import CreamIcon from "../../assets/images/UserIcon_Cream.png";
@@ -27,6 +27,28 @@ const iconMap = {
   purple: { src: PurpleIcon, alt: "Purple Icon" },
   red: { src: RedIcon, alt: "Red Icon" },
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
+};
+
+// URLを検出してクリック可能にするヘルパー関数
+const renderTextWithLinks = (text: string): React.ReactNode[] => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <Text
+          key={index}
+          color="$blue10"
+          textDecorationLine="underline"
+          onPress={() => Linking.openURL(part)}
+        >
+          {part}
+        </Text>
+      );
+    }
+    return part;
+  });
 };
 
 interface PostProps {
@@ -86,7 +108,11 @@ const Post: React.FC<PostProps> = ({
     if (!isComment && post?.id && !hasCommentSubmit) {
       router.push({
         pathname: "/post-detail" as any,
-        params: { postId: post.id, post: JSON.stringify(post), openComment: "true" },
+        params: {
+          postId: post.id,
+          post: JSON.stringify(post),
+          openComment: "true",
+        },
       });
       return;
     }
@@ -107,7 +133,7 @@ const Post: React.FC<PostProps> = ({
 
         <View pl="$12">
           <Text fontSize="$5" color="$gray900">
-            {post.content}
+            {isAiComment ? renderTextWithLinks(post.content) : post.content}
           </Text>
         </View>
 
