@@ -8,6 +8,7 @@ import { AchievementModal } from "./AchievementModal";
 import { CircleIcon } from "./CircleIcon";
 import { MarkButton } from "./MarkButton";
 import Tutorial from "./Tutorial";
+import { useUserContext } from "./UserProvider";
 
 // アイコンマッピング（React Nativeではrequireを使用）
 const iconMap = {
@@ -68,20 +69,27 @@ export const Header: React.FC<Props> = ({
   onPressCreate,
   onPressLogo,
   onPressProfile,
-  iconColor = "blue",
+  iconColor,
   iconSrc,
   unlockedIds = [],
 }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { iconColor: contextIconColor } = useUserContext();
   const [isAchievementVisible, setIsAchievementVisible] = useState(false);
   const [isTutorialVisible, setIsTutorialVisible] = useState(false);
 
-  // iconColorが指定されている場合はiconMapから取得、iconSrcが指定されている場合はそれを使用
-  const { src, alt } =
-    iconColor && iconMap[iconColor]
-      ? iconMap[iconColor]
-      : { src: iconSrc || iconMap.blue.src, alt: "user" };
+  // 優先順位: 明示iconColor > 明示iconSrc > UserContextのiconColor > blue
+  const contextMappedIcon =
+    !iconColor && !iconSrc && contextIconColor && contextIconColor in iconMap
+      ? iconMap[contextIconColor as IconColor]
+      : undefined;
+
+  const { src, alt } = iconColor
+    ? iconMap[iconColor]
+    : iconSrc
+      ? { src: iconSrc, alt: "user" }
+      : contextMappedIcon || iconMap.blue;
 
   const handleLogoPress = () => {
     if (onPressLogo) {
