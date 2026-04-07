@@ -141,16 +141,8 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 comment_text = sanitize_ai_output(response.text.strip())
                 comments_list = [c.strip() for c in comment_text.split('\n') if c.strip()]
                 
-                # URLをaタグに変換
-                import re
-                def url_to_link(comment: str) -> str:
-                    return re.sub(
-                        r'(https?://[^\s]+)',
-                        r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
-                        comment
-                    )
-                
-                generated_comments = [url_to_link(c) for c in comments_list]
+                # プレーンテキストのままコメントを保存（フロントエンドで URL リンク化）
+                generated_comments = comments_list
                 
                 # 生成数が足りない場合はデフォルトで補完
                 while len(generated_comments) < total_normal:
