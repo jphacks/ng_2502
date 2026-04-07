@@ -1,9 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-// @ts-ignore
-import { initializeAuth, getReactNativePersistence, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -17,11 +15,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 const db = getFirestore(app);
-
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
-
+const auth = getAuth(app);
 const storage = getStorage(app);
 
 const useFirebaseEmulator =
@@ -29,8 +23,8 @@ const useFirebaseEmulator =
 
 if (useFirebaseEmulator) {
   console.log("🔥 Firebase Emulator に接続中...");
-  
-  const PC_IP = "192.168.0.5";
+
+  const PC_IP = "192.168.68.55";
 
   try {
     connectFirestoreEmulator(db, PC_IP, 8080);
@@ -38,6 +32,7 @@ if (useFirebaseEmulator) {
       disableWarnings: true,
     });
     connectStorageEmulator(storage, PC_IP, 9199);
+
     console.log("✅ エミュレータ接続設定が完了しました");
   } catch (error) {
     console.error("エミュレータ接続エラー:", error);

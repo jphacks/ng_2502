@@ -1,16 +1,18 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Image, StyleSheet } from "react-native";
+import { Image, StyleSheet, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Text, XStack, YStack } from "tamagui";
 import { NgReason } from "../components/ui/NgReason";
-import { PostInput } from "../components/ui/PostInput";
+import { PostInput, SelectedImage } from "../components/ui/PostInput";
 import { ProfileIcon } from "../components/ui/ProfileIcon";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
 import { API_BASE_URL } from "../constants/api";
-import { auth } from "../firebase";
+import { storage, auth } from "../firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useUser } from "../hooks/useUser";
+import * as ImageManipulator from "expo-image-manipulator";
 
 const iconMap = {
   blue: require("../assets/images/UserIcon_Blue.png"),
@@ -26,7 +28,11 @@ const iconMap = {
 
 const InputPage = () => {
   const [text, setText] = useState("");
+  const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isNgOpen, setIsNgOpen] = useState(false);
   const [ngReason, setNgReason] = useState("");
   const router = useRouter();
@@ -38,6 +44,61 @@ const InputPage = () => {
     return Image.resolveAssetSource(source).uri;
   }, [iconColor]);
 
+  const uploadImage = async (
+    imageUri: string,
+    imageName: string,
+  ): Promise<string> => {
+    try {
+      setIsUploading(true);
+
+      // HEIF/HEIC画像をJPEGに変換
+      const ext = imageName.split(".").pop()?.toLowerCase();
+      let finalUri = imageUri;
+      let finalName = imageName;
+
+      if (ext === "heic" || ext === "heif") {
+        try {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ resize: { width: 1920, height: 1920 } }],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+          );
+          finalUri = manipulated.uri;
+          finalName = imageName.replace(/\.(heic|heif)$/i, ".jpg");
+          console.log("✅ HEIF→JPEG変換成功");
+        } catch (convertError) {
+          console.warn(
+            "HEIF変換失敗、元のイメージでアップロード:",
+            convertError,
+          );
+        }
+      }
+
+      // Fetch image blob from URI
+      const response = await fetch(finalUri);
+      const blob = await response.blob();
+
+      // Generate unique filename with timestamp
+      const timestamp = Date.now();
+      const uuid = Math.random().toString(36).substring(2, 15);
+      const uploadName = `posts/${timestamp}_${uuid}_${finalName}`;
+      const storageRef = ref(storage, uploadName);
+
+      // Upload to Firebase Storage
+      await uploadBytes(storageRef, blob);
+
+      // Get download URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log("✅ 画像アップロード成功:", downloadUrl);
+      return downloadUrl;
+    } catch (error) {
+      console.error("🔥 画像アップロードエラー:", error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     const user = auth.currentUser;
     if (!text.trim() || !user) {
@@ -48,6 +109,20 @@ const InputPage = () => {
     setIsSubmitting(true);
 
     try {
+      let imageUrl: string | null = null;
+
+      // Upload image if selected
+      if (selectedImage) {
+        try {
+          imageUrl = await uploadImage(selectedImage.uri, selectedImage.name);
+        } catch (uploadError) {
+          console.error("画像アップロード失敗:", uploadError);
+          Alert.alert("画像アップロード失敗", "再度お試しください");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const token = await user.getIdToken();
       const response = await fetch(`${API_BASE_URL}/post`, {
         method: "POST",
@@ -57,7 +132,7 @@ const InputPage = () => {
         },
         body: JSON.stringify({
           content: text,
-          imageUrl: null,
+          imageUrl,
           replyTo: null,
         }),
       });
@@ -117,7 +192,7 @@ const InputPage = () => {
         </WhiteTextButton>
         <Button
           onPress={handleSubmit}
-          disabled={!text.trim() || isSubmitting}
+          disabled={!text.trim() || isSubmitting || isUploading}
           accessibilityLabel="とうこう"
           backgroundColor="#FFB433"
           color="#FFFFFF"
@@ -126,9 +201,12 @@ const InputPage = () => {
           borderRadius="$2"
           fontWeight="600"
           fontSize={16}
-          opacity={!text.trim() || isSubmitting ? 0.5 : 1}
+          opacity={!text.trim() || isSubmitting || isUploading ? 0.5 : 1}
           $platform-web={{
-            cursor: !text.trim() || isSubmitting ? "not-allowed" : "pointer",
+            cursor:
+              !text.trim() || isSubmitting || isUploading
+                ? "not-allowed"
+                : "pointer",
           }}
           hoverStyle={{
             backgroundColor: "#ffb120",
@@ -138,7 +216,11 @@ const InputPage = () => {
             opacity: 0.7,
           }}
         >
-          <Feather name="send" size={20} color="#FFFFFF" />
+          <Feather
+            name={isUploading ? "loader" : "send"}
+            size={20}
+            color="#FFFFFF"
+          />
         </Button>
       </XStack>
 
@@ -152,10 +234,11 @@ const InputPage = () => {
                 setText(inputText);
               }
             }}
+            onImageSelect={setSelectedImage}
             placeholder="こんな発見したよ！"
             style={styles.postInput}
           />
-          <XStack justifyContent="flex-end" mt="$2">
+          <XStack justifyContent="space-between" alignItems="center" mt="$2">
             <Text color={text.length > 140 ? "$red10" : "$gray10"}>
               {text.length} / 140
             </Text>

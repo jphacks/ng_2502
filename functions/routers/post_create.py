@@ -12,6 +12,7 @@ import functions.config.firebase as firebase
 from functions.utils.predicted_likes import sample_viral_predicted_likes
 from functions.gemini_utils import (
     validate_and_analyze_post,
+    validate_and_analyze_post_with_image,
     predict_viral,
     generate_controversial_comments,
     generate_viral_comments,
@@ -37,7 +38,16 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     
     # ★★★ 1回のAPI呼び出しで安全性チェックと包括的分析を実行 ★★★
     is_tensai_mode = (user_mode == "てんさく")
-    analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
+    
+    # 画像がある場合は画像込みで分析、ない場合はテキストのみ
+    if payload.imageUrl:
+        analysis = await validate_and_analyze_post_with_image(
+            payload.content, 
+            payload.imageUrl, 
+            require_safety_check=is_tensai_mode
+        )
+    else:
+        analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
     
     # てんさくモードで安全でない場合は投稿を拒否
     if is_tensai_mode and not analysis["is_safe"]:

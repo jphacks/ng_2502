@@ -5,6 +5,9 @@ import asyncio
 import re
 import random
 import json
+import requests
+from PIL import Image
+import io
 
 # .env読み込み
 load_dotenv()
@@ -25,6 +28,187 @@ def _is_local_dev() -> bool:
     return os.getenv("ENV") == "local"
 
 # --- 関数定義 ---
+
+async def validate_and_analyze_post_with_image(text: str, image_url: str, require_safety_check: bool = True) -> dict:
+    """
+    画像付き投稿の安全性チェックと包括的分析を1回のAPI呼び出しで実行。
+    
+    Args:
+        text: 投稿内容
+        image_url: 画像のURL（Firebase Storage等）
+        require_safety_check: True=てんさくモード（安全チェック必要）、False=じゆうモード（分析のみ）
+    
+    戻り値: validate_and_analyze_postと同じ形式
+    """
+    if not gemini_model:
+        return {
+            "is_safe": False,
+            "safety_reason": "AIモデルが初期化されていません。",
+            "is_positive": False,
+            "reply_count": 3,
+            "reaction_types": ["positive", "neutral", "neutral"],
+            "predicted_likes": 3,
+            "is_controversial": False
+        }
+    
+    try:
+        # 画像をダウンロード
+        response = requests.get(image_url, timeout=10)
+        response.raise_for_status()
+        image_bytes = response.content
+        image = Image.open(io.BytesIO(image_bytes))
+        
+    except Exception as e:
+        print(f"画像のダウンロードに失敗: {e}")
+        # 画像取得失敗時はテキストのみで分析
+        return await validate_and_analyze_post(text, require_safety_check)
+    
+    if require_safety_check:
+        # てんさくモード：安全性チェック + 包括的分析
+        prompt = f"""
+あなたは小学生向けSNSの分析AIです。以下のテキストと画像を分析し、JSON形式で結果を返してください。
+
+テキスト: "{text}"
+画像: 添付された画像を参照
+
+まず安全性をチェックし、その後に詳細分析を行ってください。
+
+【安全性チェック】
+以下の内容がテキストまたは画像に含まれているか判定:
+- いじめ、暴力的な表現、武器の画像
+- 個人情報（顔写真、名札、住所、電話番号、学校名など）
+- 不適切な内容（性的、グロテスク、危険行為など）
+- その他子供に不適切な内容
+
+【詳細分析（安全な場合のみ）】
+1. is_positive: この投稿（テキスト+画像）は読んだ人を明るい気持ちにしますか？ (true/false)
+2. reply_count: コメントが何件付くと予測されますか？ (3〜10の整数)
+3. reaction_types: コメントのタイプをカンマ区切りで予測
+   - タイプは positive / negative / neutral のいずれか
+   - reply_countと同じ数だけ生成
+4. predicted_likes: 「いいね」が何件つくと予測されますか？ (0〜100の整数)
+   - 画像がある投稿は通常より多めに予測
+5. is_controversial: この投稿が炎上するリスクがありますか？ (true/false)
+   判定基準:
+   - 個人を特定できる情報（顔、名札、学校名など）
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見
+   - センシティブなトピック
+   - 誤解を招きやすい誇張表現
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "reply_count": 5,
+  "reaction_types": "positive, neutral, positive, neutral, positive",
+  "predicted_likes": 25,
+  "is_controversial": false
+}}
+
+※ is_safe が false の場合、safety_reason にひらがな・カタカナのみで簡単な言葉で理由を書いてください。
+※ is_safe が false の場合、他の項目はデフォルト値でOKです。
+"""
+    else:
+        # じゆうモード：安全性チェックなし、分析のみ
+        prompt = f"""
+あなたはSNS分析AIです。以下のテキストと画像を分析し、JSON形式で結果を返してください。
+
+テキスト: "{text}"
+画像: 添付された画像を参照
+
+以下の項目を分析してください：
+
+1. is_positive: この投稿（テキスト+画像）は読んだ人を明るい気持ちにしますか？ (true/false)
+2. reply_count: コメントが何件付くと予測されますか？ (3〜10の整数)
+3. reaction_types: コメントのタイプをカンマ区切りで予測してください。
+   - タイプは positive / negative / neutral のいずれか
+   - reply_countと同じ数だけ生成
+   - 例: "positive, neutral, positive"
+4. predicted_likes: 「いいね」が何件つくと予測されますか？ (0〜100の整数)
+   - 画像がある投稿は通常より多めに予測
+5. is_controversial: この投稿が炎上するリスクがありますか？ (true/false)
+   炎上リスクの判定基準:
+   - 名前、住所、電話番号、学校名などの個人情報
+   - 個人を特定できる顔写真や名札
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見を含む内容
+   - センシティブなトピック
+   - 誤解を招きやすい誇張表現や虚偽の可能性がある内容
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "reply_count": 5,
+  "reaction_types": "positive, neutral, positive, neutral, positive",
+  "predicted_likes": 25,
+  "is_controversial": false
+}}
+"""
+    
+    try:
+        # テキストと画像を一緒にGeminiに送信
+        response = await gemini_model.generate_content_async([prompt, image])
+        result_text = response.text.strip()
+        
+        # JSONの抽出（```json```で囲まれている場合に対応）
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in result_text:
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+        
+        # JSONをパース
+        data = json.loads(result_text)
+        
+        # 安全性チェックの結果を取得
+        is_safe = data.get("is_safe", True if not require_safety_check else False)
+        safety_reason = data.get("safety_reason", "")
+        
+        # 安全でない場合はデフォルト値を返す
+        if require_safety_check and not is_safe:
+            return {
+                "is_safe": False,
+                "safety_reason": safety_reason if safety_reason else "ふさわしくないないようがふくまれています。",
+                "is_positive": False,
+                "reply_count": 3,
+                "reaction_types": ["neutral", "neutral", "neutral"],
+                "predicted_likes": 0,
+                "is_controversial": True
+            }
+        
+        # reaction_typesを文字列からリストに変換
+        reaction_types_str = data.get("reaction_types", "positive, neutral, neutral")
+        reaction_types = [t.strip() for t in reaction_types_str.split(",") if t.strip() in ["positive", "neutral", "negative"]]
+        
+        if not reaction_types:
+            reaction_types = ["positive", "neutral", "neutral"]
+        
+        # reply_countとreaction_typesの整合性を確保
+        reply_count = data.get("reply_count", len(reaction_types))
+        if len(reaction_types) != reply_count:
+            if len(reaction_types) < reply_count:
+                reaction_types.extend(["neutral"] * (reply_count - len(reaction_types)))
+            else:
+                reaction_types = reaction_types[:reply_count]
+        
+        return {
+            "is_safe": is_safe,
+            "safety_reason": safety_reason,
+            "is_positive": data.get("is_positive", False),
+            "reply_count": reply_count,
+            "reaction_types": reaction_types,
+            "predicted_likes": max(0, min(100, data.get("predicted_likes", 5))),
+            "is_controversial": data.get("is_controversial", False)
+        }
+        
+    except Exception as e:
+        print(f"画像込み統合分析エラー: {e}")
+        # エラー時はテキストのみで分析
+        return await validate_and_analyze_post(text, require_safety_check)
+
 
 async def validate_and_analyze_post(text: str, require_safety_check: bool = True) -> dict:
     """
