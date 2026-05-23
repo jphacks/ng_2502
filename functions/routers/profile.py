@@ -20,6 +20,10 @@ from firebase_admin import firestore
 from functions.auth.dependencies import get_current_user
 from functions.models.profile import ProfileUpdate
 import functions.config.firebase as firebase   # ← ここだけ変更
+from pydantic import BaseModel
+
+from passlib.context import CryptContext #パスワードハッシュ化
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter()
 
@@ -34,18 +38,17 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         if doc.exists:
             return doc.to_dict()
         else:
-            return {
+            data= {
                 "username": "新しいユーザー",
                 "iconColor": "blue",
                 "mode": "てんさく"
             }
 
+        data["hasParentPassword"] = "parentPasswordHash" in data
+        return data
     profile_data = await loop.run_in_executor(None, fetch_user_profile)
-
-    if profile_data is None:
-        raise HTTPException(status_code=404, detail="User profile not found")
-
     return profile_data
+    
 
 
 @router.put("/profile")
@@ -64,3 +67,64 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     except Exception as e:
         print("プロフィール更新エラー:", e)
         raise HTTPException(status_code=500, detail="プロフィール更新に失敗しました")
+
+class ParentPassword(BaseModel):
+    password: str
+
+
+@router.post("/profile/parent-password")
+async def set_parent_password(payload: ParentPassword, user_id: str = Depends(get_current_user)):
+
+    # 4桁数字チェック
+    if not payload.password.isdigit():
+        raise HTTPException(
+            status_code=400,
+            detail="PINは数字のみです"
+        )
+
+    if len(payload.password) != 4:
+        raise HTTPException(
+            status_code=400,
+            detail="PINは4桁です"
+        )
+    
+    # デバッグ用ログ
+    print(payload.password)
+    print(type(payload.password))
+    print(len(payload.password))
+
+    hashed = pwd_context.hash(payload.password)
+
+    def write_password():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "parentPasswordHash": hashed
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_password)
+
+    return {"message": "password set"}
+
+class VerifyPassword(BaseModel):
+    password: str
+
+
+@router.post("/profile/verify-parent-password")
+async def verify_parent_password(payload: VerifyPassword, user_id: str = Depends(get_current_user)):
+
+    def fetch_password():
+        user_ref = firebase.db.collection("users").document(user_id)
+        doc = user_ref.get()
+        return doc.to_dict().get("parentPasswordHash")
+
+    loop = asyncio.get_running_loop()
+    stored_hash = await loop.run_in_executor(None, fetch_password)
+
+    if not stored_hash:
+        raise HTTPException(status_code=400, detail="password not set")
+
+    if pwd_context.verify(payload.password, stored_hash):
+        return {"success": True}
+
+    raise HTTPException(status_code=401, detail="wrong password")

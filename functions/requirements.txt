@@ -6,6 +6,10 @@ firebase-admin
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 
+#パスワードハッシュ化
+passlib[bcrypt]==1.7.4
+bcrypt=4.0.1
+
 google-cloud-firestore==2.16.0
 google-generativeai==0.5.4
 firebase-admin==6.5.0

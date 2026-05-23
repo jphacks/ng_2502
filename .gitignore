@@ -78,3 +78,12 @@ __pycache__/
 
 # backendディレクトリ内の仮想環境を除外
 backend/venv/
+venv/
+env/
+.venv/
+# dataconnect generated files
+.dataconnect
+
+# Ignore backend virtualenv
+backend/venv/
+backup_backend.zip
