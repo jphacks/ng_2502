@@ -12,6 +12,7 @@ import functions.config.firebase as firebase
 from functions.utils.predicted_likes import sample_viral_predicted_likes
 from functions.gemini_utils import (
     validate_and_analyze_post,
+    validate_and_analyze_post_with_image,
     predict_viral,
     generate_controversial_comments,
     generate_viral_comments,
@@ -37,7 +38,16 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     
     # ★★★ 1回のAPI呼び出しで安全性チェックと包括的分析を実行 ★★★
     is_tensai_mode = (user_mode == "てんさく")
-    analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
+    
+    # 画像がある場合は画像込みで分析、ない場合はテキストのみ
+    if payload.imageUrl:
+        analysis = await validate_and_analyze_post_with_image(
+            payload.content, 
+            payload.imageUrl, 
+            require_safety_check=is_tensai_mode
+        )
+    else:
+        analysis = await validate_and_analyze_post(payload.content, require_safety_check=is_tensai_mode)
     
     # てんさくモードで安全でない場合は投稿を拒否
     if is_tensai_mode and not analysis["is_safe"]:
@@ -131,16 +141,8 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 comment_text = sanitize_ai_output(response.text.strip())
                 comments_list = [c.strip() for c in comment_text.split('\n') if c.strip()]
                 
-                # URLをaタグに変換
-                import re
-                def url_to_link(comment: str) -> str:
-                    return re.sub(
-                        r'(https?://[^\s]+)',
-                        r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
-                        comment
-                    )
-                
-                generated_comments = [url_to_link(c) for c in comments_list]
+                # プレーンテキストのままコメントを保存（フロントエンドで URL リンク化）
+                generated_comments = comments_list
                 
                 # 生成数が足りない場合はデフォルトで補完
                 while len(generated_comments) < total_normal:

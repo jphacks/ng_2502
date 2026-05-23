@@ -2,7 +2,7 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import type { GestureResponderEvent } from "react-native";
-import { Pressable } from "react-native";
+import { Image, Pressable, Linking } from "react-native";
 import { Separator, Text, View, XStack, YStack } from "tamagui";
 import BlueIcon from "../../assets/images/UserIcon_Blue.png";
 import CreamIcon from "../../assets/images/UserIcon_Cream.png";
@@ -29,12 +29,35 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
+// URLを検出してクリック可能にするヘルパー関数
+const renderTextWithLinks = (text: string): React.ReactNode[] => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <Text
+          key={index}
+          color="$blue10"
+          textDecorationLine="underline"
+          onPress={() => Linking.openURL(part)}
+        >
+          {part}
+        </Text>
+      );
+    }
+    return part;
+  });
+};
+
 interface PostProps {
   post: {
     id?: string;
     userId?: string;
     user?: { username?: string; iconColor?: keyof typeof iconMap };
     content: string;
+    imageUrl?: string | null;
     predictedLikes?: number;
   };
   onCommentSubmit?: (text: string) => void;
@@ -86,7 +109,11 @@ const Post: React.FC<PostProps> = ({
     if (!isComment && post?.id && !hasCommentSubmit) {
       router.push({
         pathname: "/post-detail" as any,
-        params: { postId: post.id, post: JSON.stringify(post), openComment: "true" },
+        params: {
+          postId: post.id,
+          post: JSON.stringify(post),
+          openComment: "true",
+        },
       });
       return;
     }
@@ -95,8 +122,8 @@ const Post: React.FC<PostProps> = ({
 
   return (
     <Pressable onPress={isComment ? undefined : handlePostClick}>
-      <YStack space="$4" p="$3" backgroundColor="$background">
-        <XStack space="$2" alignItems="center">
+      <YStack space="$4" backgroundColor="$background">
+        <XStack space="$2" marginTop="$2" alignItems="center">
           <CircleIcon src={src} alt={alt} />
           <YStack alignItems="flex-start" space="$0">
             <Text fontWeight="bold" fontSize="$4">
@@ -107,8 +134,16 @@ const Post: React.FC<PostProps> = ({
 
         <View pl="$12">
           <Text fontSize="$5" color="$gray900">
-            {post.content}
+            {isAiComment ? renderTextWithLinks(post.content) : post.content}
           </Text>
+          {post.imageUrl && (
+            <YStack mt="$3" borderRadius="$2" overflow="hidden">
+              <Image
+                source={{ uri: post.imageUrl }}
+                style={{ width: "100%", height: 200, borderRadius: 8 }}
+              />
+            </YStack>
+          )}
         </View>
 
         <XStack justifyContent="flex-end" space="$1">
@@ -144,7 +179,7 @@ const Post: React.FC<PostProps> = ({
           )}
         </XStack>
 
-        <Separator borderColor="#80CBC4" />
+        {isComment && <Separator borderColor="#ffb433" />}
       </YStack>
 
       <InputComment
