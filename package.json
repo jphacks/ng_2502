@@ -1,11 +1,17 @@
 {
-  "dependencies": {
-    "@expo/vector-icons": "^15.0.3",
-    "@react-native-async-storage/async-storage": "^3.0.1",
-    "@tamagui/lucide-icons": "^2.0.0-rc.6",
-    "react-native-render-html": "^6.3.4"
+  "name": "ng_2502-workspace",
+  "private": true,
+  "scripts": {
+    "start:emulator": "firebase emulators:start",
+    "start:backend:local": "cross-env ENV=local PYTHONIOENCODING=utf-8 functions\\venv\\Scripts\\python -m uvicorn functions.main:app --host 0.0.0.0 --port 8000 --reload",
+    "start:backend:dev": "cross-env ENV=dev PYTHONIOENCODING=utf-8 functions\\venv\\Scripts\\python -m uvicorn functions.main:app --host 0.0.0.0 --port 8000 --reload",
+    "start:frontend": "cd mobile && npx expo start",
+    "dev": "npm run dev:local",
+    "dev:local": "concurrently -k -c \"blue,green\" -n \"EMULATOR,BACKEND\" \"npm run start:emulator\" \"npm run start:backend:local\"",
+    "dev:remote-db": "npm run start:backend:dev"
   },
   "devDependencies": {
-    "typescript": "~5.9.2"
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0"
   }
 }
