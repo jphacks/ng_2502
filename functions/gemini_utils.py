@@ -674,3 +674,158 @@ async def generate_link_comments(text: str, num_comments: int = 2, link: str = N
         return html_comments
     except Exception as e:
         return [f"AI生成エラー: {e}" for _ in range(num_comments)]
+    
+
+#プロフィールコメントAI判定
+async def validate_comment(text: str, require_safety_check: bool = True) -> dict:
+    """
+    コメントの安全性チェックと包括的分析を1回のAPI呼び出しで実行。
+    
+    Args:
+        text: コメント内容
+        require_safety_check: True=てんさくモード（安全チェック必要）、False=じゆうモード（分析のみ）
+    
+    戻り値: {
+        "is_safe": bool,
+        "safety_reason": str,
+        "is_positive": bool,
+        "is_controversial": bool
+    }
+    """
+    if not gemini_model:
+        if _is_local_dev():
+            return {
+                "is_safe": True,
+                "safety_reason": "",
+                "is_positive": True,
+                "is_controversial": False
+            }
+        return {
+            "is_safe": False,
+            "safety_reason": "AIモデルが初期化されていません。",
+            "is_positive": False,
+            "is_controversial": False
+        }
+
+    if require_safety_check:
+        # てんさくモード：安全性チェック + 包括的分析
+        prompt = f"""
+あなたは小学生向けSNSの分析AIです。以下のコメントを分析し、JSON形式で結果を返してください。
+
+コメント: "{text}"
+
+まず安全性をチェックし、その後に詳細分析を行ってください。
+
+【安全性チェック】
+is_safe: このコメントは安全ですか？ (true/false)
+以下の内容が含まれているか判定:含まれている場合はfalse
+- いじめ、暴力的な表現
+- 個人情報（名前、住所、電話番号、学校名など）
+- その他子供に不適切な内容
+
+
+【詳細分析（安全な場合のみ）】
+1. is_positive: このコメントは読んだ人を明るい気持ちにしますか？ (true/false)
+2. is_controversial: このコメントが炎上するリスクがありますか？ (true/false)
+   判定基準:
+   - 個人情報が含まれている
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見
+   - センシティブなトピック（政治、宗教、人種など）
+   - 誤解を招きやすい誇張表現
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "is_controversial": false
+}}
+
+※ is_safe が false の場合、safety_reason にひらがな・カタカナのみで簡単な言葉で理由を書いてください。
+※ is_safe が false の場合、他の項目はデフォルト値でOKです。
+"""
+    else:
+        # じゆうモード：安全性チェックなし、分析のみ
+        prompt = f"""
+あなたはSNS分析AIです。以下のコメントを分析し、JSON形式で結果を返してください。
+
+コメント: "{text}"
+
+以下の項目を分析してください：
+
+1. is_positive: このコメントは読んだ人を明るい気持ちにしますか？ (true/false)
+2. is_controversial: このコメントが炎上するリスクがありますか？ (true/false)
+   炎上リスクの判定基準:
+   - 名前、住所（住んでいる。や家が近い。など）、電話番号、学校名などの個人情報が含まれている
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見を含む内容
+   - センシティブなトピック（政治、宗教、人種など）
+   - 誤解を招きやすい誇張表現や虚偽の可能性がある内容
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "is_controversial": false
+}}
+"""
+    
+    try:
+        response = await gemini_model.generate_content_async(prompt)
+        result_text = response.text.strip()
+        
+        # JSONの抽出（```json```で囲まれている場合に対応）
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in result_text:
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+        
+        # JSONをパース
+        data = json.loads(result_text)
+        
+        # 安全性チェックの結果を取得
+        is_safe = data.get("is_safe", True if not require_safety_check else False)
+        safety_reason = data.get("safety_reason", "")
+        
+        # 安全でない場合はデフォルト値を返す
+        if require_safety_check and not is_safe:
+            return {
+                "is_safe": False,
+                "safety_reason": safety_reason if safety_reason else "不適切な内容が含まれています。",
+                "is_positive": False,
+                "is_controversial": True  # 安全でない投稿は炎上扱い
+            }
+        
+        return {
+            "is_safe": is_safe,
+            "safety_reason": safety_reason,
+            "is_positive": data.get("is_positive", False),
+            "is_controversial": data.get("is_controversial", False)
+        }
+        
+    except Exception as e:
+        print(f"統合分析エラー: {e}")
+        # エラー時のデフォルト値
+        if _is_local_dev():
+            return {
+                "is_safe": False,
+                "safety_reason": "エラーが発生しました",
+                "is_positive": True,
+                "is_controversial": False
+            }
+        if require_safety_check:
+            return {
+                "is_safe": False,
+                "safety_reason": f"エラー: {e}",
+                "is_positive": False,
+                "is_controversial": False
+            }
+        else:
+            return {
+                "is_safe": True,
+                "safety_reason": "",
+                "is_positive": False,
+                "is_controversial": False
+            }

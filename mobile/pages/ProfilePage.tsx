@@ -116,9 +116,6 @@ export default function ProfilePage() {
 
       try {
         const idToken = await user.getIdToken();
-        // API_BASE_URLのログ出力を追加(デバッグ用)
-        console.log("API_BASE_URL =", API_BASE_URL);
-        console.log(`${API_BASE_URL}/profile`);
 
         const response = await axios.get(`${API_BASE_URL}/profile`, {
           headers: { Authorization: `Bearer ${idToken}` },
@@ -176,7 +173,11 @@ export default function ProfilePage() {
       router.replace("/(tabs)/list"); // 完了後は一覧画面へ遷移
     } catch (error: any) {
       console.error("🔥 プロフィールの更新に失敗しました:", error);
-      Alert.alert("保存エラー", error.response?.data?.detail || error.message);
+      //コメントが不適切な場合は、APIからのエラーメッセージを表示する
+      const message =
+        error.response?.data?.detail || "プロフィールを保存できませんでした";
+
+      Alert.alert("コメントをへんこうできません", message);
     } finally {
       setIsSaving(false);
     }

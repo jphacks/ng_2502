@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 from functions.auth.dependencies import get_current_user
 from functions.models.profile import ProfileUpdate
+from functions.gemini_utils import (validate_comment)
 import functions.config.firebase as firebase   # ← ここだけ変更
 from pydantic import BaseModel
 
@@ -27,6 +28,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter()
 
+# プロフィール取得API
 @router.get("/profile")
 async def get_profile(user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
@@ -40,6 +42,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         else:
             data= {
                 "username": "新しいユーザー",
+                "comment": "ひとこと",
                 "iconColor": "blue",
                 "mode": "てんさく"
             }
@@ -50,11 +53,46 @@ async def get_profile(user_id: str = Depends(get_current_user)):
     return profile_data
     
 
-
+# プロフィール更新API
 @router.put("/profile")
 async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
     profile_data = payload.dict()
+
+     # コメント取得
+    comment = profile_data.get("comment", "")
+
+    def fetch_user():
+        user_ref = firebase.db.collection("users").document(user_id)
+        doc = user_ref.get()
+
+        if doc.exists:
+            return doc.to_dict()
+
+        return {}
+    user_data = await loop.run_in_executor(None, fetch_user)
+
+    mode = profile_data.get("mode", "てんさく")
+
+    # AI分析
+    analysis_result = await validate_comment(
+        comment,
+        require_safety_check=(mode == "てんさく")
+    )
+
+    # てんさくモードの場合はコメントの安全性チェックを実行
+    if mode == "てんさく" and not analysis_result["is_safe"]:
+        raise HTTPException(status_code=400, detail= analysis_result['safety_reason'])
+    
+    # AI分析結果をFirestore保存用データに追加
+    profile_data["commentAnalysis"] = {
+        "is_safe": analysis_result["is_safe"],
+        "safety_reason": analysis_result["safety_reason"],
+        "is_positive": analysis_result["is_positive"],
+        "is_controversial": analysis_result["is_controversial"]
+    }
+
+
 
     def write_user_profile():
         user_ref = firebase.db.collection("users").document(user_id)
