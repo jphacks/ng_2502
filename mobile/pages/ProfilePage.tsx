@@ -64,6 +64,8 @@ export default function ProfilePage() {
   const {
     username: globalUsername,
     setUsername: setGlobalUsername,
+    comment: globalComment,
+    setComment: setGlobalComment,
     iconColor: globalIconColor,
     setIconColor: setGlobalIconColor,
   } = useUser();
@@ -72,6 +74,8 @@ export default function ProfilePage() {
   const insets = useSafeAreaInsets();
 
   const [localUsername, setLocalUsername] = useState(globalUsername ?? "");
+  //コメント入力欄
+  const [localComment, setLocalComment] = useState(globalComment ?? "");
   const [localIconColor, setLocalIconColor] = useState(
     globalIconColor || "blue",
   );
@@ -112,6 +116,10 @@ export default function ProfilePage() {
 
       try {
         const idToken = await user.getIdToken();
+        // API_BASE_URLのログ出力を追加(デバッグ用)
+        console.log("API_BASE_URL =", API_BASE_URL);
+        console.log(`${API_BASE_URL}/profile`);
+
         const response = await axios.get(`${API_BASE_URL}/profile`, {
           headers: { Authorization: `Bearer ${idToken}` },
         });
@@ -147,6 +155,7 @@ export default function ProfilePage() {
 
     const profileData = {
       username: localUsername,
+      comment: localComment,
       iconColor: localIconColor,
       mode: mode,
     };
@@ -161,6 +170,7 @@ export default function ProfilePage() {
 
       setGlobalUsername(localUsername);
       setGlobalIconColor(localIconColor);
+      setGlobalComment(localComment);
 
       Alert.alert("成功", "プロフィールを保存しました");
       router.replace("/(tabs)/list"); // 完了後は一覧画面へ遷移
@@ -373,6 +383,18 @@ export default function ProfilePage() {
               />
             </View>
           </XStack>
+
+          {/* 3. ひとことコメント入力 */}
+          <YStack space="$3" alignItems="center">
+            <View width="100%" maxWidth={400}>
+              <InputText
+                placeholder="ひとこと"
+                value={localComment}
+                onChangeText={setLocalComment}
+                editable={!isSaving}
+              />
+            </View>
+          </YStack>
 
           {/* 3. アイコン選択エリア */}
           <YStack alignItems="center" space="$4">
