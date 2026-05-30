@@ -30,6 +30,10 @@ export default function RootLayout() {
               <Stack.Screen name="profile" options={{ headerShown: false }} />
               <Stack.Screen name="modeset" options={{ headerShown: false }} />
               <Stack.Screen
+                name="passwordset"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
                 name="post-detail"
                 options={{ headerShown: false }}
               />

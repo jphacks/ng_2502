@@ -166,3 +166,13 @@ async def verify_parent_password(payload: VerifyPassword, user_id: str = Depends
         return {"success": True}
 
     raise HTTPException(status_code=401, detail="wrong password")
+#パスワードがあるかどうかを返すAPI
+@router.get("/profile/has-parent-password")
+async def has_parent_password(user_id: str = Depends(get_current_user)):
+    user = firebase.db.collection("users").document(user_id)
+    doc = user.get()
+
+    return {
+        "has_parent_password": bool(doc.get("parentPasswordHash"))
+    }
+

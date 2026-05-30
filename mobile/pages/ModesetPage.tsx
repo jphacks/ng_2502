@@ -1,6 +1,6 @@
 import { Text, View, XStack, YStack } from "tamagui";
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import {
   Alert,
   ScrollView,
@@ -37,7 +37,32 @@ export default function ModePage() {
     null,
   );
 
+  const fetchHasParentPassword = async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+
+      const response = await axios.get(
+        `${API_BASE_URL}/profile/has-parent-password`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log(response.data);
+      setHasParentPassword(response.data.has_parent_password);
+    } catch (error) {
+      console.error("取得失敗", error);
+    }
+  };
+
+  useFocusEffect(() => {
+    fetchHasParentPassword();
+  });
+
   //パスワード設定のAPI呼び出し
+  //パスワードが正しいかどうかの確認
   const verifyParentPassword = async (password: string) => {
     const user = auth.currentUser;
     if (!user) return false;
@@ -59,34 +84,36 @@ export default function ModePage() {
     }
   };
 
-  const setParentPassword = async (pin: string) => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
+  // //パスワードの設定
+  // const setParentPassword = async (pin: string) => {
+  //   try {
+  //     const token = await auth.currentUser?.getIdToken();
 
-      await axios.post(
-        `${API_BASE_URL}/profile/parent-password`,
-        {
-          password: pin,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+  //     await axios.post(
+  //       `${API_BASE_URL}/profile/parent-password`,
+  //       {
+  //         password: pin,
+  //       },
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       },
+  //     );
 
-      setHasParentPassword(true);
+  //     setHasParentPassword(true);
 
-      return true;
-    } catch (error) {
-      console.error("🔥 PIN設定失敗", error);
+  //     return true;
+  //   } catch (error) {
+  //     console.error("🔥 PIN設定失敗", error);
 
-      Alert.alert("エラー", "PIN設定に失敗しました");
+  //     Alert.alert("エラー", "PIN設定に失敗しました");
 
-      return false;
-    }
-  };
+  //     return false;
+  //   }
+  // };
 
+  //4桁PINの入力を処理する関数
   const handlePinSubmit = async () => {
     if (!/^\d{4}$/.test(pinInput)) {
       Alert.alert("エラー", "4桁の数字を入力してください");
@@ -94,19 +121,19 @@ export default function ModePage() {
     }
 
     // 初回設定
-    if (!hasParentPassword) {
-      const ok = await setParentPassword(pinInput);
+    // if (!hasParentPassword) {
+    //   const ok = await setParentPassword(pinInput);
 
-      if (ok) {
-        setPinModalVisible(false);
+    //   if (ok) {
+    //     setPinModalVisible(false);
 
-        if (pendingMode) {
-          setMode(pendingMode);
-        }
-      }
+    //     if (pendingMode) {
+    //       setMode(pendingMode);
+    //     }
+    //   }
 
-      return;
-    }
+    //   return;
+    // }
 
     // 2回目以降
     const ok = await verifyParentPassword(pinInput);
@@ -181,36 +208,54 @@ export default function ModePage() {
             alignItems="center"
             gap="$4"
           >
-            <Text fontSize={20} fontWeight="bold">
-              {hasParentPassword ? "保護者PINを入力" : "4桁PINを設定"}
-            </Text>
-            <TextInput
-              value={pinInput}
-              onChangeText={setPinInput}
-              keyboardType="number-pad" // 数字キーボードを表示
-              secureTextEntry // 入力を隠す
-              maxLength={4} // 4桁に制限
-              style={{
-                borderWidth: 1,
-                borderColor: "#ccc",
-                width: 120,
-                fontSize: 28,
-                textAlign: "center",
-                padding: 12,
-                borderRadius: 10,
-                letterSpacing: 10,
-              }}
-            />
-            <XStack gap="$4">
-              <WhiteTextButton
-                onPress={() => {
-                  setPinModalVisible(false);
-                }}
-              >
-                <Text>キャンセル</Text>
-              </WhiteTextButton>
-              <TextButton onPress={handlePinSubmit}>OK</TextButton>
-            </XStack>
+            {hasParentPassword ? (
+              <YStack space="$4" alignItems="center">
+                <Text fontSize={20} fontWeight="bold">
+                  保護者PINを入力
+                </Text>
+
+                <TextInput
+                  value={pinInput}
+                  onChangeText={setPinInput}
+                  keyboardType="number-pad" // 数字キーボードを表示
+                  secureTextEntry // 入力を隠す
+                  maxLength={4} // 4桁に制限
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#ccc",
+                    width: 120,
+                    fontSize: 28,
+                    textAlign: "center",
+                    padding: 12,
+                    borderRadius: 10,
+                    letterSpacing: 10,
+                  }}
+                />
+                <XStack gap="$4">
+                  <WhiteTextButton
+                    onPress={() => {
+                      setPinModalVisible(false);
+                    }}
+                  >
+                    <Text>キャンセル</Text>
+                  </WhiteTextButton>
+                  <TextButton onPress={handlePinSubmit}>OK</TextButton>
+                </XStack>
+              </YStack>
+            ) : (
+              <YStack space="$4" alignItems="center">
+                <Text fontSize={20} fontWeight="bold">
+                  パスワードを設定してください
+                </Text>
+                <WhiteTextButton
+                  onPress={() => {
+                    setPinModalVisible(false);
+                  }}
+                >
+                  <Text>OK</Text>
+                </WhiteTextButton>
+              </YStack>
+            )}
           </View>
         </View>
       </Modal>
@@ -261,7 +306,7 @@ export default function ModePage() {
 
           {/* おうちの人の設定ボタン */}
           <TouchableOpacity
-            //onPress={() => router.push("/parent-setting")}
+            onPress={() => router.push("./parentsetting")}
             style={{
               marginTop: 60,
               backgroundColor: "#F5A623",
