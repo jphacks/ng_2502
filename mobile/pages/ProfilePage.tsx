@@ -1,13 +1,7 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-} from "react-native";
+import { Alert, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spinner, Text, View, XStack, YStack } from "tamagui";
 
