@@ -28,6 +28,7 @@ const iconMap = {
 
 const InputPage = () => {
   const [text, setText] = useState("");
+  const [isToFollower, setIsToFollower] = useState(false);
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
   );
@@ -134,6 +135,7 @@ const InputPage = () => {
           content: text,
           imageUrl,
           replyTo: null,
+          isToFollower,
         }),
       });
 
@@ -227,6 +229,32 @@ const InputPage = () => {
       <XStack flex={1} gap="$3">
         <ProfileIcon src={iconUri} name="自分" size="md" />
         <YStack flex={1}>
+          <XStack gap="$2" mb="$2">
+            <Button
+              onPress={() => setIsToFollower(false)}
+              backgroundColor={isToFollower ? "#F3F4F6" : "#FFB433"}
+              color={isToFollower ? "#374151" : "#FFFFFF"}
+              borderWidth={0}
+              borderRadius="$10"
+              paddingHorizontal="$3"
+              fontSize={14}
+              fontWeight="600"
+            >
+              みんな向け
+            </Button>
+            <Button
+              onPress={() => setIsToFollower(true)}
+              backgroundColor={isToFollower ? "#FFB433" : "#F3F4F6"}
+              color={isToFollower ? "#FFFFFF" : "#374151"}
+              borderWidth={0}
+              borderRadius="$10"
+              paddingHorizontal="$3"
+              fontSize={14}
+              fontWeight="600"
+            >
+              友達向け
+            </Button>
+          </XStack>
           <PostInput
             value={text}
             onChangeText={(inputText: string) => {

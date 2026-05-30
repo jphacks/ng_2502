@@ -5,3 +5,4 @@ class PostCreate(BaseModel):
     content: str
     imageUrl: Optional[str] = None
     replyTo: Optional[str] = None
+    isToFollower: bool = False
