@@ -76,9 +76,9 @@ const LoginPage = () => {
       console.log("⏳ 認証の初期化を待機中...");
       await new Promise((resolve) => setTimeout(resolve, 1000)); // 1秒待つ
 
-      console.log("🚀 /profile へ遷移します");
+      console.log("🚀 /modeset へ遷移します");
 
-      router.replace("/profile");
+      router.replace("./modeset"); // 新規登録後はモード設定へ
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("❌ 新規登録エラー:", error);

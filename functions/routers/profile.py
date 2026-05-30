@@ -57,7 +57,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
 @router.put("/profile")
 async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
-    profile_data = payload.dict()
+    profile_data = payload.dict(exclude_none=True)
 
      # コメント取得
     comment = profile_data.get("comment", "")

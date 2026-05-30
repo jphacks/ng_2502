@@ -79,22 +79,22 @@ export default function ProfilePage() {
   const [localIconColor, setLocalIconColor] = useState(
     globalIconColor || "blue",
   );
-  // 親パスワードの有無
-  const [hasParentPassword, setHasParentPassword] = useState(false);
-
-  const [mode, setMode] = useState<"てんさく" | "じゆう">("てんさく");
+  // 親パスワードの有無(モード)
+  //const [hasParentPassword, setHasParentPassword] = useState(false);
+  // 現在選ばれているモード
+  //const [mode, setMode] = useState<"てんさく" | "じゆう">("てんさく");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   //4桁数字パスワードにするための変更
-  const [pinModalVisible, setPinModalVisible] = useState(false);
+  //const [pinModalVisible, setPinModalVisible] = useState(false);
 
-  const [pinInput, setPinInput] = useState("");
+  //const [pinInput, setPinInput] = useState("");
 
-  const [pendingMode, setPendingMode] = useState<"てんさく" | "じゆう" | null>(
-    null,
-  );
+  //const [pendingMode, setPendingMode] = useState<"てんさく" | "じゆう" | null>(
+  //  null,
+  //);
 
   useEffect(() => {
     /*
@@ -124,8 +124,8 @@ export default function ProfilePage() {
         console.log("✅ プロフィール取得成功:", response.data);
         setLocalUsername(response.data.username || globalUsername || "");
         setLocalIconColor(response.data.iconColor || globalIconColor || "blue");
-        setMode(response.data.mode || "てんさく");
-        setHasParentPassword(response.data.hasParentPassword || false);
+        //setMode(response.data.mode || "てんさく");
+        //setHasParentPassword(response.data.hasParentPassword || false);
       } catch (error: any) {
         console.error("🔥 プロフィールの取得に失敗:", error);
         Alert.alert(
@@ -154,7 +154,7 @@ export default function ProfilePage() {
       username: localUsername,
       comment: localComment,
       iconColor: localIconColor,
-      mode: mode,
+      //mode: mode,
     };
 
     try {
@@ -184,96 +184,96 @@ export default function ProfilePage() {
   };
 
   //パスワード設定のAPI呼び出し
-  const verifyParentPassword = async (password: string) => {
-    const user = auth.currentUser;
-    if (!user) return false;
+  //const verifyParentPassword = async (password: string) => {
+  //const user = auth.currentUser;
+  //if (!user) return false;
 
-    const idToken = await user.getIdToken();
+  //const idToken = await user.getIdToken();
 
-    try {
-      await axios.post(
-        `${API_BASE_URL}/profile/verify-parent-password`,
-        { password },
-        {
-          headers: { Authorization: `Bearer ${idToken}` },
-        },
-      );
+  //try {
+  //await axios.post(
+  //`${API_BASE_URL}/profile/verify-parent-password`,
+  //{ password },
+  //{
+  //headers: { Authorization: `Bearer ${idToken}` },
+  //},
+  //);
 
-      return true;
-    } catch {
-      return false;
-    }
-  };
+  //return true;
+  //} catch {
+  //return false;
+  //}
+  //};
 
-  const setParentPassword = async (pin: string) => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
+  //const setParentPassword = async (pin: string) => {
+  //try {
+  //const token = await auth.currentUser?.getIdToken();
 
-      await axios.post(
-        `${API_BASE_URL}/profile/parent-password`,
-        {
-          password: pin,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+  //await axios.post(
+  //`${API_BASE_URL}/profile/parent-password`,
+  //{
+  //password: pin,
+  //},
+  //{
+  //headers: {
+  // Authorization: `Bearer ${token}`,
+  //     },
+  //   },
+  // );
 
-      setHasParentPassword(true);
+  //   setHasParentPassword(true);
 
-      return true;
-    } catch (error) {
-      console.error("🔥 PIN設定失敗", error);
+  //     return true;
+  //   } catch (error) {
+  //     console.error("🔥 PIN設定失敗", error);
 
-      Alert.alert("エラー", "PIN設定に失敗しました");
+  //     Alert.alert("エラー", "PIN設定に失敗しました");
 
-      return false;
-    }
-  };
+  //     return false;
+  //   }
+  // };
 
-  const handlePinSubmit = async () => {
-    if (!/^\d{4}$/.test(pinInput)) {
-      Alert.alert("エラー", "4桁の数字を入力してください");
-      return;
-    }
+  // const handlePinSubmit = async () => {
+  //   if (!/^\d{4}$/.test(pinInput)) {
+  //     Alert.alert("エラー", "4桁の数字を入力してください");
+  //     return;
+  //   }
 
-    // 初回設定
-    if (!hasParentPassword) {
-      const ok = await setParentPassword(pinInput);
+  //   // 初回設定
+  //   if (!hasParentPassword) {
+  //     const ok = await setParentPassword(pinInput);
 
-      if (ok) {
-        setPinModalVisible(false);
+  //     if (ok) {
+  //       setPinModalVisible(false);
 
-        if (pendingMode) {
-          setMode(pendingMode);
-        }
-      }
+  //       if (pendingMode) {
+  //         setMode(pendingMode);
+  //       }
+  //     }
 
-      return;
-    }
+  //     return;
+  //   }
 
-    // 2回目以降
-    const ok = await verifyParentPassword(pinInput);
+  //   // 2回目以降
+  //   const ok = await verifyParentPassword(pinInput);
 
-    if (!ok) {
-      Alert.alert("エラー", "PINが違います");
-      return;
-    }
+  //   if (!ok) {
+  //     Alert.alert("エラー", "PINが違います");
+  //     return;
+  //   }
 
-    if (pendingMode) {
-      setMode(pendingMode);
-    }
+  //   if (pendingMode) {
+  //     setMode(pendingMode);
+  //   }
 
-    setPinModalVisible(false);
-  };
+  //   setPinModalVisible(false);
+  // };
 
-  const changeMode = async (newMode: "てんさく" | "じゆう") => {
-    setPendingMode(newMode);
-    setPinInput("");
-    setPinModalVisible(true);
-  };
+  // const changeMode = async (newMode: "てんさく" | "じゆう") => {
+  //   setPendingMode(newMode);
+  //   setPinInput("");
+  //   setPinModalVisible(true);
+  // };
 
   if (isLoading) {
     return (
@@ -290,7 +290,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      {/* 4桁PIN入力のモーダル */}
+      {/* 4桁PIN入力のモーダル
       <Modal visible={pinModalVisible} transparent animationType="fade">
         <View
           flex={1}
@@ -338,7 +338,7 @@ export default function ProfilePage() {
             </XStack>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
       <ScrollView style={{ flex: 1, backgroundColor: "#fff" }}>
         <YStack
           padding="$4"
@@ -425,7 +425,7 @@ export default function ProfilePage() {
             </XStack>
           </YStack>
 
-          {/* 4. モード選択エリア */}
+          {/* 4. モード選択エリア
           <YStack alignItems="center" space="$4" paddingBottom="$8">
             <Text color="#FFB433" fontSize={20} fontWeight="bold">
               モードをえらんでね
@@ -446,7 +446,7 @@ export default function ProfilePage() {
                 じゆう
               </ProfileButton>
             </XStack>
-          </YStack>
+          </YStack> */}
         </YStack>
       </ScrollView>
     </>

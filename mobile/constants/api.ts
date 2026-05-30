@@ -1,6 +1,6 @@
 const DEFAULT_PRODUCTION_API_URL = "https://ng-2502testesu.onrender.com";
 const defaultLocalHost =
-  process.env.EXPO_PUBLIC_LOCAL_BACKEND_HOST ?? "192.168.68.106";
+  process.env.EXPO_PUBLIC_LOCAL_BACKEND_HOST ?? "192.168.68.101";
 
 const useLocalBackend =
   __DEV__ && process.env.EXPO_PUBLIC_USE_LOCAL_BACKEND !== "false";
