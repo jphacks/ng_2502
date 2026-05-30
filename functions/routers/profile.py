@@ -176,3 +176,66 @@ async def has_parent_password(user_id: str = Depends(get_current_user)):
         "has_parent_password": bool(doc.get("parentPasswordHash"))
     }
 
+class ModeLockRequest(BaseModel):
+    mode_lock: bool
+
+#modeのロック状態を保存するAPI
+@router.post("/profile/mode-lock")
+async def set_mode_lock(payload: ModeLockRequest, user_id: str = Depends(get_current_user)):
+    def write_mode_lock():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "mode_lock": payload.mode_lock
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_mode_lock)
+
+    return {"message": "mode lock updated"}
+
+#modeのロック状態を取得するAPI
+@router.get("/profile/get-mode-lock")
+async def get_mode_lock(user_id: str = Depends(get_current_user)):
+    user_ref = firebase.db.collection("users").document(user_id)
+    doc = user_ref.get()
+    if not doc.exists:
+        return {"mode_lock": True}
+
+    user_data = doc.to_dict()
+
+    return {
+        "mode_lock": user_data.get("mode_lock", True)
+    }
+
+
+class FriendLockRequest(BaseModel):
+    friend_lock: bool
+
+#friendのロック状態を保存するAPI
+@router.post("/profile/friend-lock")
+async def set_friend_lock(payload: FriendLockRequest, user_id: str = Depends(get_current_user)):
+    def write_friend_lock():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "friend_lock": payload.friend_lock
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_friend_lock)
+
+    return {"message": "friend lock updated"}
+
+#friendのロック状態を取得するAPI
+@router.get("/profile/get-friend-lock")
+async def get_friend_lock(user_id: str = Depends(get_current_user)):
+    user_ref = firebase.db.collection("users").document(user_id)
+    doc = user_ref.get()
+    if not doc.exists:
+        return {"friend_lock": True}
+
+    user_data = doc.to_dict()
+
+    return {
+        "friend_lock": user_data.get("friend_lock", True)
+    }
+

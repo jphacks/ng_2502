@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { TextInput, Alert, Switch, ScrollView } from "react-native";
 import { Text, YStack, XStack } from "tamagui";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -24,9 +24,10 @@ export default function ModePage() {
   const [verifiedPassword, setVerifiedPassword] = useState(false);
 
   //modeとフレンドのロック設定
-  const [modeLock, setModeLock] = useState(true);
-  const [friendLock, setFriendLock] = useState(true);
+  const [currentModeLock, setCurrentModeLock] = useState(true);
+  const [currentFriendLock, setCurrentFriendLock] = useState(true);
 
+  //親パスワードの有無をAPIから取得
   const fetchHasParentPassword = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -48,9 +49,57 @@ export default function ModePage() {
     }
   };
 
-  useFocusEffect(() => {
-    fetchHasParentPassword();
-  });
+  //modeLockの状態をAPIから取得
+  const fetchModeLock = async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+
+      const response = await axios.get(
+        `${API_BASE_URL}/profile/get-mode-lock`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log(response.data);
+
+      setCurrentModeLock(response.data.mode_lock);
+    } catch (error) {
+      console.error("mode lock 取得失敗", error);
+    }
+  };
+
+  //friendLockの状態をAPIから取得
+  const fetchFriendLock = async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+
+      const response = await axios.get(
+        `${API_BASE_URL}/profile/get-friend-lock`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log(response.data);
+
+      setCurrentFriendLock(response.data.friend_lock);
+    } catch (error) {
+      console.error("friend lock 取得失敗", error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchHasParentPassword();
+      fetchModeLock();
+      fetchFriendLock();
+    }, []),
+  );
 
   // const [pendingMode, setPendingMode] = useState<"てんさく" | "じゆう" | null>(
   //   null,
@@ -146,11 +195,53 @@ export default function ModePage() {
     }
   };
 
-  //  const changeMode = async (newMode: "てんさく" | "じゆう") => {
-  //    setPendingMode(newMode);
-  //    setPinInput("");
-  //    setPinModalVisible(true);
-  //  };
+  //modeのパスワードon/off設定
+  const setModeLock = async (modeLock: boolean) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      await axios.post(
+        `${API_BASE_URL}/profile/mode-lock`,
+        {
+          mode_lock: modeLock,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.error("mode lock 保存失敗", error);
+
+      return false;
+    }
+  };
+
+  //friendLockのパスワードon/off設定
+  const setFriendLock = async (friendLock: boolean) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      await axios.post(
+        `${API_BASE_URL}/profile/friend-lock`,
+        {
+          friend_lock: friendLock,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.error("friend lock 保存失敗", error);
+
+      return false;
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -174,6 +265,21 @@ export default function ModePage() {
           return;
         }
       }
+
+      const modeLockOk = await setModeLock(currentModeLock);
+
+      if (!modeLockOk) {
+        Alert.alert("エラー", "モードロックの保存に失敗しました");
+        return;
+      }
+
+      const friendLockOk = await setFriendLock(currentFriendLock);
+
+      if (!friendLockOk) {
+        Alert.alert("エラー", "ともだちロックの保存に失敗しました");
+        return;
+      }
+
       (console.log("✅ 保護者設定更新成功:"), //response.data);
         Alert.alert("成功", "保護者設定を保存しました"));
       router.replace("/modeset"); // 完了後はモード設定画面へ遷移
@@ -267,13 +373,19 @@ export default function ModePage() {
             <XStack justifyContent="space-between" alignItems="center">
               <Text fontSize={24}>モード切り替え</Text>
 
-              <Switch value={modeLock} onValueChange={setModeLock} />
+              <Switch
+                value={currentModeLock}
+                onValueChange={setCurrentModeLock}
+              />
             </XStack>
 
             <XStack justifyContent="space-between" alignItems="center">
               <Text fontSize={24}>ともだち追加</Text>
 
-              <Switch value={friendLock} onValueChange={setFriendLock} />
+              <Switch
+                value={currentFriendLock}
+                onValueChange={setCurrentFriendLock}
+              />
             </XStack>
           </YStack>
         </YStack>
