@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "../firebase";
@@ -27,6 +28,13 @@ const LoginPage = () => {
         email,
         password,
       );
+      const user = userCredential.user;
+      await user.reload();
+
+      if (!user.emailVerified) {
+        alert("メール認証してください");
+        return;
+      }
 
       // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
       // ログイン成功後、IDトークンを取得
@@ -61,24 +69,12 @@ const LoginPage = () => {
       );
       console.log("✅ Firebase Auth 登録成功:", userCredential.user.uid);
 
-      // IDトークンを取得
-      console.log("🔑 IDトークン取得中...");
-      const idToken = await userCredential.user.getIdToken();
-      console.log("🔑 IDトークン取得成功");
-
-      console.log("💾 IDトークン保存中...");
-      await AsyncStorage.setItem("firebaseIdToken", idToken);
-      console.log("💾 IDトークン保存完了");
-
-      console.log("🆕 新規登録成功:", userCredential.user.email);
-
-      // Firebase Authの初期化を待つ
-      console.log("⏳ 認証の初期化を待機中...");
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1秒待つ
-
-      console.log("🚀 /profile へ遷移します");
-
-      router.replace("/profile");
+      //メールアドレス認証
+      const user = userCredential.user;
+      console.log("📧 メール送信開始");
+      await sendEmailVerification(user);
+      alert("確認メールを送信しました。メール認証後にログインしてください。");
+      console.log("📧 メール認証送信成功:", user.email);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("❌ 新規登録エラー:", error);

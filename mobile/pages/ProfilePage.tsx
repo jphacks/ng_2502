@@ -89,6 +89,15 @@ export default function ProfilePage() {
         return;
       }
 
+      // メール認証が完了しているか確認
+      await user.reload();
+      if (!user.emailVerified) {
+        console.log("❌ メール未認証");
+        alert("メール認証してください");
+        router.replace("/login");
+        return;
+      }
+
       console.log("✅ 認証済みユーザー:", user.uid);
       setIsLoading(true);
 
