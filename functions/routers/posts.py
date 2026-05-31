@@ -14,9 +14,9 @@ async def get_posts(user_id: str = Depends(get_current_user)):
 
     def fetch():
         docs = (
-            firebase.db.collection("posts")   # ← 修正
+            firebase.db.collection("posts")
             .where("replyTo", "==", None)
-            .where("userId", "==", user_id)
+            .where("userId", "in", [user_id, f"ai-system-{user_id}"])
             .order_by("timestamp", direction=admin_firestore.Query.DESCENDING)
             .stream()
         )
@@ -30,9 +30,16 @@ async def get_posts(user_id: str = Depends(get_current_user)):
 
             user_id_from_post = post_data.get("userId")
 
-            if user_id_from_post:
+            # --- AI投稿の場合（ai-system-xxx） ---
+            if user_id_from_post and user_id_from_post.startswith("ai-system-"):
+                # create_ai_post で保存した user 情報をそのまま使う
+                # post_data["user"] は AI投稿作成時に保存済み
+                pass
+
+            # --- 人間ユーザーの場合のみ users コレクションを参照 ---
+            else:
                 try:
-                    user_ref = firebase.db.collection("users").document(user_id_from_post)  # ← 修正
+                    user_ref = firebase.db.collection("users").document(user_id_from_post)
                     user_doc = user_ref.get()
 
                     if user_doc.exists:
@@ -53,11 +60,6 @@ async def get_posts(user_id: str = Depends(get_current_user)):
                         "username": "ユーザー名",
                         "iconColor": "blue"
                     }
-            else:
-                post_data["user"] = {
-                    "username": "ユーザー名",
-                    "iconColor": "blue"
-                }
 
             posts_list.append(post_data)
 
