@@ -6,7 +6,7 @@ import { Alert, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, H4, Separator, Spinner, Text, View, YStack, XStack } from "tamagui";
 
-import { InputComment } from "@/components/ui/InputComment"; // 既存のコンポーネント
+import { InputComment } from "@/components/ui/InputComment";
 import { NgReason } from "@/components/ui/NgReason";
 import { Post } from "@/components/ui/Post";
 import { API_BASE_URL } from "@/constants/api";
@@ -60,23 +60,19 @@ export default function PostPage() {
 
     try {
       const token = await user.getIdToken();
-      
-      // 送信データ（Payload）をバックエンドの期待する形に修正
-      // userId はトークンからサーバーが判別するため、送る必要がない場合が多いです
+
       const payload = {
         content: newCommentText,
-        replyTo: mainPostData.id, 
-        imageUrl: null, // 画像がない場合は null
+        replyTo: mainPostData.id,
+        imageUrl: null,
       };
 
-      // 1. サーバーへ投稿
       await axios.post(`${API_BASE_URL}/post`, payload, {
         headers: {
-          Authorization: `Bearer ${token}`, // これでサーバーは誰の投稿か判断します
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      // 2. 投稿成功後、最新のコメント一覧を再取得
       setIsLoadingComments(true);
       const refreshResponse = await axios.get(
         `${API_BASE_URL}/replies/${mainPostData.id}`
@@ -84,10 +80,9 @@ export default function PostPage() {
       setComments(refreshResponse.data || []);
       setIsLoadingComments(false);
 
-      setIsCommentOpen(false); 
-      
+      setIsCommentOpen(false);
+
     } catch (error: any) {
-      // デバッグ用：エラー内容を詳しくログに出す
       console.error("🔥 投稿エラー詳細:", error.response?.data || error.message);
 
       const status = error.response?.status;
@@ -105,7 +100,6 @@ export default function PostPage() {
 
   return (
     <View flex={1} backgroundColor="#fff">
-      {/* メインコンテンツエリア */}
       <ScrollView style={{ flex: 1 }}>
         <YStack paddingTop={insets.top + 8} space="$4">
           <View alignSelf="flex-start">
@@ -134,14 +128,18 @@ export default function PostPage() {
               <Spinner size="large" color="$orange10" />
             ) : (
               comments.map((comment) => (
-                <Post key={comment.id} post={comment} isComment={true} />
+                <Post
+                  key={comment.id}
+                  post={comment}
+                  isComment={true}
+                  isAiComment={comment.isAiComment}   // ← ★ 追加
+                />
               ))
             )}
           </YStack>
         </YStack>
       </ScrollView>
 
-      {/* --- 画面下部に固定されるトリガーバー --- */}
       <View
         position="absolute"
         bottom={0}
@@ -169,7 +167,6 @@ export default function PostPage() {
         </Pressable>
       </View>
 
-      {/* 既存のモーダルコンポーネント */}
       <InputComment
         visible={isCommentOpen}
         onClose={() => setIsCommentOpen(false)}

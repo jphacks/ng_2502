@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { GestureResponderEvent } from "react-native";
 import { Image, Pressable, Linking } from "react-native";
 import { Separator, Text, View, XStack, YStack } from "tamagui";
+
 import BlueIcon from "../../assets/images/UserIcon_Blue.png";
 import CreamIcon from "../../assets/images/UserIcon_Cream.png";
 import GreenIcon from "../../assets/images/UserIcon_Green.png";
@@ -13,6 +14,7 @@ import OliveIcon from "../../assets/images/UserIcon_Olive.png";
 import PurpleIcon from "../../assets/images/UserIcon_Purple.png";
 import RedIcon from "../../assets/images/UserIcon_Red.png";
 import YellowIcon from "../../assets/images/UserIcon_Yellow.png";
+
 import { useUser } from "../../hooks/useUser";
 import { CircleIcon } from "./CircleIcon";
 import { InputComment } from "./InputComment";
@@ -29,13 +31,14 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-// URLを検出してクリック可能にするヘルパー関数
+// URLを検出してクリック可能にする（test() バグ修正済み）
 const renderTextWithLinks = (text: string): React.ReactNode[] => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
 
   return parts.map((part, index) => {
-    if (urlRegex.test(part)) {
+    // URL かどうかは match() で判定（test() は g フラグで壊れるため禁止）
+    if (part.match(/^https?:\/\/[^\s]+$/)) {
       return (
         <Text
           key={index}
@@ -47,7 +50,7 @@ const renderTextWithLinks = (text: string): React.ReactNode[] => {
         </Text>
       );
     }
-    return part;
+    return <Text key={index}>{part}</Text>;
   });
 };
 
@@ -59,6 +62,7 @@ interface PostProps {
     content: string;
     imageUrl?: string | null;
     predictedLikes?: number;
+    isAiComment?: boolean;
   };
   onCommentSubmit?: (text: string) => void;
   isComment?: boolean;
@@ -123,6 +127,7 @@ const Post: React.FC<PostProps> = ({
   return (
     <Pressable onPress={isComment ? undefined : handlePostClick}>
       <YStack space="$4" backgroundColor="$background">
+        {/* ユーザー情報 */}
         <XStack space="$2" marginTop="$2" alignItems="center">
           <CircleIcon src={src} alt={alt} />
           <YStack alignItems="flex-start" space="$0">
@@ -132,10 +137,12 @@ const Post: React.FC<PostProps> = ({
           </YStack>
         </XStack>
 
+        {/* 本文 */}
         <View pl="$12">
           <Text fontSize="$5" color="$gray900">
             {isAiComment ? renderTextWithLinks(post.content) : post.content}
           </Text>
+
           {post.imageUrl && (
             <YStack mt="$3" borderRadius="$2" overflow="hidden">
               <Image
@@ -146,6 +153,7 @@ const Post: React.FC<PostProps> = ({
           )}
         </View>
 
+        {/* いいね・コメント */}
         <XStack justifyContent="flex-end" space="$1">
           <XStack space="$1" alignItems="center">
             <Pressable onPress={handleLikeClick}>
@@ -155,6 +163,7 @@ const Post: React.FC<PostProps> = ({
                 color={isLiked ? "#d32f2f" : "#999"}
               />
             </Pressable>
+
             {typeof post.predictedLikes === "number" && !isComment && (
               <Text
                 fontSize="$4"
@@ -182,10 +191,11 @@ const Post: React.FC<PostProps> = ({
         {isComment && <Separator borderColor="#ffb433" />}
       </YStack>
 
+      {/* コメント入力 */}
       <InputComment
-        visible={showCommentInput} // isOpen -> visible
+        visible={showCommentInput}
         onClose={() => setShowCommentInput(false)}
-        onSubmit={onCommentSubmit ?? (() => {})} // onCommentSubmit -> onSubmit
+        onSubmit={onCommentSubmit ?? (() => {})}
       />
     </Pressable>
   );
