@@ -23,8 +23,14 @@ export default function PostPage() {
   const [comments, setComments] = useState<any[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
+
+  // ★ スパム拒否用（既存）
   const [isNgOpen, setIsNgOpen] = useState(false);
   const [ngReason, setNgReason] = useState("");
+
+  // ★ 教育モーダル用（今回追加）
+  const [isEduOpen, setIsEduOpen] = useState(false);
+  const [eduReason, setEduReason] = useState("");
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -73,6 +79,7 @@ export default function PostPage() {
         },
       });
 
+      // コメント再取得
       setIsLoadingComments(true);
       const refreshResponse = await axios.get(
         `${API_BASE_URL}/replies/${mainPostData.id}`
@@ -81,6 +88,12 @@ export default function PostPage() {
       setIsLoadingComments(false);
 
       setIsCommentOpen(false);
+
+      // ★ 教育モーダル：危険投稿にコメントした場合
+      if (mainPostData?.riskLevel === "danger") {
+        setEduReason(mainPostData.riskReason ?? "");
+        setIsEduOpen(true);
+      }
 
     } catch (error: any) {
       console.error("🔥 投稿エラー詳細:", error.response?.data || error.message);
@@ -132,7 +145,7 @@ export default function PostPage() {
                   key={comment.id}
                   post={comment}
                   isComment={true}
-                  isAiComment={comment.isAiComment}   // ← ★ 追加
+                  isAiComment={comment.isAiComment}
                 />
               ))
             )}
@@ -140,6 +153,7 @@ export default function PostPage() {
         </YStack>
       </ScrollView>
 
+      {/* コメント入力バー */}
       <View
         position="absolute"
         bottom={0}
@@ -167,16 +181,25 @@ export default function PostPage() {
         </Pressable>
       </View>
 
+      {/* コメント入力モーダル */}
       <InputComment
         visible={isCommentOpen}
         onClose={() => setIsCommentOpen(false)}
         onSubmit={handleCommentSubmit}
       />
 
+      {/* ★ スパム拒否用（既存） */}
       <NgReason
         isOpen={isNgOpen}
         onClose={() => setIsNgOpen(false)}
         reason={ngReason}
+      />
+
+      {/* ★ 教育モーダル（今回追加） */}
+      <NgReason
+        isOpen={isEduOpen}
+        onClose={() => setIsEduOpen(false)}
+        reason={eduReason}
       />
     </View>
   );

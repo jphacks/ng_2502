@@ -50,10 +50,10 @@ async def create_ai_post(user_id: str = Depends(get_current_user)):
         # Firestore 保存
         doc_ref = db.collection("posts").document()
         doc_ref.set({
-            "userId": f"ai-system-{user_id}",  # ← ユーザーごとにAI投稿を分離
+            "userId": f"ai-system-{user_id}",
             "user": {
-                "username": ai_name,          # ← ランダムAI名
-                "iconColor": ai_color         # ← ランダムカラー
+                "username": ai_name,
+                "iconColor": ai_color
             },
             "content": ai_data["content"],
             "imageUrl": None,
@@ -66,8 +66,11 @@ async def create_ai_post(user_id: str = Depends(get_current_user)):
             "isControversial": False,
             "isViral": False,
             "aiComments": [],
+
+            # ★ ここが今回の追加ポイント
             "riskLevel": ai_data.get("riskLevel", "unknown"),
             "riskReason": ai_data.get("riskReason", ""),
+            "dangerType": ai_data.get("dangerType"),
         })
 
         print(f"✅ Firestore 保存成功")
@@ -78,6 +81,7 @@ async def create_ai_post(user_id: str = Depends(get_current_user)):
             "content": ai_data["content"],
             "riskLevel": ai_data.get("riskLevel"),
             "riskReason": ai_data.get("riskReason"),
+            "dangerType": ai_data.get("dangerType"),  # ← ★ 追加
         }
 
     except Exception as e:

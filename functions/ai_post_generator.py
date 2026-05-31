@@ -12,18 +12,29 @@ else:
     model = None
 
 
+# ★ カテゴリ別の固定理由文（ひらがな）
+DANGER_REASONS = {
+    "adult": "しらないおとなが、あうことやこじんじょうほう（なまえ・じゅうしょなど）をきいてくる、あぶないとうこうだよ。へんじをしたり、おしえたりしないでね。",
+    "bully": "だれかをきずつけるわるくちや、なかまはずれのとうこうだよ。いっしょになってわるくちをいわないようにしようね。",
+    "bad_invite": "ルールをやぶるわるいさそい（よふかし・ないしょ・サボりなど）のとうこうだよ。さそいにのらないで、おとなにそうだんしようね。",
+    "safe": "あんぜんなにちじょうのとうこうだよ。",
+}
+
+
 async def generate_ai_post_text():
     """AI投稿テキストを生成（危険投稿3種 + 小学生の日常投稿）"""
 
     # 30% の確率で危険投稿
     make_danger = random.random() < 0.3
 
+    # -------------------------
+    # ★ 危険カテゴリの選択
+    # -------------------------
+    danger_type = None
     if make_danger:
-        # 危険投稿の種類をランダムに選ぶ
         danger_type = random.choice(["adult", "bully", "bad_invite"])
 
         if danger_type == "adult":
-            # ★ 大人が子どもに話しかける危険投稿
             prompt = """
             あなたは教育用シミュレーションAIです。
             小学生SNSで「大人が子どもに話しかけてくる危険な投稿」を40文字以内で1つ生成してください。
@@ -39,7 +50,6 @@ async def generate_ai_post_text():
             """
 
         elif danger_type == "bully":
-            # ★ 子ども同士の悪口・いじめ系
             prompt = """
             あなたは教育用シミュレーションAIです。
             小学生SNSで「子ども同士の悪口・いじめにつながる危険な投稿」を40文字以内で1つ生成してください。
@@ -47,14 +57,12 @@ async def generate_ai_post_text():
             条件：
             - 相手を傷つける言葉（うざい、きもい、ばか、など）
             - 仲間外し、無視、悪口
-            - 名前や伏字（○○、●●）は禁止
-            - 相手を指すときは「その子」「あの子」などを使う
+            - 名前や伏字は禁止
             - 絵文字なし
             - 本文のみ
             """
 
-        else:
-            # ★ 子ども同士の悪い誘い・マナー違反系
+        else:  # bad_invite
             prompt = """
             あなたは教育用シミュレーションAIです。
             小学生SNSで「子ども同士の悪い誘い・マナー違反の危険な投稿」を40文字以内で1つ生成してください。
@@ -67,7 +75,9 @@ async def generate_ai_post_text():
             """
 
     else:
-        # ★ 小学生の日常投稿（注意喚起は禁止）
+        # -------------------------
+        # ★ 安全投稿
+        # -------------------------
         prompt = """
         あなたは小学生です。
         小学生SNSの「日常の安全な投稿」を40文字以内で1つ生成してください。
@@ -79,7 +89,9 @@ async def generate_ai_post_text():
         - 本文のみ
         """
 
-    # Gemini で生成
+    # -------------------------
+    # ★ Gemini で生成
+    # -------------------------
     try:
         if model is None:
             text = "こんにちは！😊"
@@ -89,30 +101,21 @@ async def generate_ai_post_text():
     except:
         text = "こんにちは！😊"
 
-    # ★ 危険ワードで内容ベース判定
-    DANGER_WORDS = [
-        # 大人系
-        "住所", "電話", "会おう", "URL", "リンク", "DM", "ライン",
-        "学校教えて", "ひみつ", "秘密", "こっそり", "会いたい",
-        # いじめ系
-        "うざ", "きも", "ばか", "しね", "むし", "仲間外れ",
-        # 悪い誘い系
-        "バレない", "深夜", "課金", "サボ", "嘘つ"
-    ]
-    danger = any(w in text for w in DANGER_WORDS)
-
-    # ★ ラベルは「内容」で決める
-    if danger:
+    # -------------------------
+    # ★ カテゴリベースで riskLevel / riskReason を決定
+    # -------------------------
+    if danger_type is not None:
         risk_level = "danger"
-        risk_reason = "危険な投稿の可能性があります"
+        risk_reason = DANGER_REASONS[danger_type]
     else:
         risk_level = "safe"
-        risk_reason = "安全な日常投稿です"
+        risk_reason = DANGER_REASONS["safe"]
 
-    print(f"AI投稿: {text} (risk: {risk_level})")
+    print(f"AI投稿: {text} (risk: {risk_level}, dangerType: {danger_type})")
 
     return {
         "content": text,
         "riskLevel": risk_level,
-        "riskReason": risk_reason
+        "riskReason": risk_reason,
+        "dangerType": danger_type,
     }
