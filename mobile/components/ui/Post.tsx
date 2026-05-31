@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { GestureResponderEvent } from "react-native";
 import { Image, Pressable, Linking } from "react-native";
 import { Separator, Text, View, XStack, YStack } from "tamagui";
+
 import BlueIcon from "../../assets/images/UserIcon_Blue.png";
 import CreamIcon from "../../assets/images/UserIcon_Cream.png";
 import GreenIcon from "../../assets/images/UserIcon_Green.png";
@@ -13,9 +14,11 @@ import OliveIcon from "../../assets/images/UserIcon_Olive.png";
 import PurpleIcon from "../../assets/images/UserIcon_Purple.png";
 import RedIcon from "../../assets/images/UserIcon_Red.png";
 import YellowIcon from "../../assets/images/UserIcon_Yellow.png";
+
 import { useUser } from "../../hooks/useUser";
 import { CircleIcon } from "./CircleIcon";
 import { InputComment } from "./InputComment";
+import { NgReason } from "./NgReason"; // ← ★ 教育モーダルを使う
 
 const iconMap = {
   blue: { src: BlueIcon, alt: "Blue Icon" },
@@ -29,13 +32,13 @@ const iconMap = {
   yellow: { src: YellowIcon, alt: "Yellow Icon" },
 };
 
-// URLを検出してクリック可能にするヘルパー関数
+// URLを検出してクリック可能にする（test() バグ修正済み）
 const renderTextWithLinks = (text: string): React.ReactNode[] => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
 
   return parts.map((part, index) => {
-    if (urlRegex.test(part)) {
+    if (part.match(/^https?:\/\/[^\s]+$/)) {
       return (
         <Text
           key={index}
@@ -47,7 +50,7 @@ const renderTextWithLinks = (text: string): React.ReactNode[] => {
         </Text>
       );
     }
-    return part;
+    return <Text key={index}>{part}</Text>;
   });
 };
 
@@ -59,6 +62,11 @@ interface PostProps {
     content: string;
     imageUrl?: string | null;
     predictedLikes?: number;
+    isAiComment?: boolean;
+
+    // ★ 追加：危険投稿判定
+    riskLevel?: "safe" | "danger";
+    riskReason?: string;
   };
   onCommentSubmit?: (text: string) => void;
   isComment?: boolean;
@@ -84,6 +92,10 @@ const Post: React.FC<PostProps> = ({
   const [showCommentInput, setShowCommentInput] = useState(false);
   const hasCommentSubmit = typeof onCommentSubmit === "function";
 
+  // ★ 教育モーダル用 state
+  const [isEduOpen, setIsEduOpen] = useState(false);
+  const [eduReason, setEduReason] = useState("");
+
   if (!post) return null;
 
   const safeUser = post.user || { username: "ユーザー名", iconColor: "blue" };
@@ -93,7 +105,15 @@ const Post: React.FC<PostProps> = ({
   const handleLikeClick = (e: GestureResponderEvent) => {
     e.preventDefault?.();
     if (isOwnPost) return;
-    setIsLiked(!isLiked);
+
+    const next = !isLiked;
+    setIsLiked(next);
+
+    // ★ いいね ON → danger のとき教育モーダル
+    if (next && post.riskLevel === "danger") {
+      setEduReason(post.riskReason ?? "");
+      setIsEduOpen(true);
+    }
   };
 
   const handlePostClick = () => {
@@ -121,73 +141,88 @@ const Post: React.FC<PostProps> = ({
   };
 
   return (
-    <Pressable onPress={isComment ? undefined : handlePostClick}>
-      <YStack space="$4" backgroundColor="$background">
-        <XStack space="$2" marginTop="$2" alignItems="center">
-          <CircleIcon src={src} alt={alt} />
-          <YStack alignItems="flex-start" space="$0">
-            <Text fontWeight="bold" fontSize="$4">
-              {safeUser.username || "ユーザー名"}
-            </Text>
-          </YStack>
-        </XStack>
-
-        <View pl="$12">
-          <Text fontSize="$5" color="$gray900">
-            {isAiComment ? renderTextWithLinks(post.content) : post.content}
-          </Text>
-          {post.imageUrl && (
-            <YStack mt="$3" borderRadius="$2" overflow="hidden">
-              <Image
-                source={{ uri: post.imageUrl }}
-                style={{ width: "100%", height: 200, borderRadius: 8 }}
-              />
-            </YStack>
-          )}
-        </View>
-
-        <XStack justifyContent="flex-end" space="$1">
-          <XStack space="$1" alignItems="center">
-            <Pressable onPress={handleLikeClick}>
-              <FontAwesome6
-                name="heart"
-                size={20}
-                color={isLiked ? "#d32f2f" : "#999"}
-              />
-            </Pressable>
-            {typeof post.predictedLikes === "number" && !isComment && (
-              <Text
-                fontSize="$4"
-                color="#80CBC4"
-                fontFamily="monospace"
-                minWidth="$8"
-                textAlign="center"
-              >
-                {post.predictedLikes}
+    <>
+      <Pressable onPress={isComment ? undefined : handlePostClick}>
+        <YStack space="$4" backgroundColor="$background">
+          {/* ユーザー情報 */}
+          <XStack space="$2" marginTop="$2" alignItems="center">
+            <CircleIcon src={src} alt={alt} />
+            <YStack alignItems="flex-start" space="$0">
+              <Text fontWeight="bold" fontSize="$4">
+                {safeUser.username || "ユーザー名"}
               </Text>
+            </YStack>
+          </XStack>
+
+          {/* 本文 */}
+          <View pl="$12">
+            <Text fontSize="$5" color="$gray900">
+              {isAiComment ? renderTextWithLinks(post.content) : post.content}
+            </Text>
+
+            {post.imageUrl && (
+              <YStack mt="$3" borderRadius="$2" overflow="hidden">
+                <Image
+                  source={{ uri: post.imageUrl }}
+                  style={{ width: "100%", height: 200, borderRadius: 8 }}
+                />
+              </YStack>
+            )}
+          </View>
+
+          {/* いいね・コメント */}
+          <XStack justifyContent="flex-end" space="$1">
+            <XStack space="$1" alignItems="center">
+              <Pressable onPress={handleLikeClick}>
+                <FontAwesome6
+                  name="heart"
+                  size={20}
+                  color={isLiked ? "#d32f2f" : "#999"}
+                />
+              </Pressable>
+
+              {typeof post.predictedLikes === "number" && !isComment && (
+                <Text
+                  fontSize="$4"
+                  color="#80CBC4"
+                  fontFamily="monospace"
+                  minWidth="$8"
+                  textAlign="center"
+                >
+                  {post.predictedLikes}
+                </Text>
+              )}
+            </XStack>
+
+            {!isComment && (
+              <View ml="$4">
+                <Pressable onPress={handleCommentClick}>
+                  <Text fontSize="$3" color="$gray600">
+                    💬
+                  </Text>
+                </Pressable>
+              </View>
             )}
           </XStack>
 
-          {!isComment && (
-            <View ml="$4">
-              <Pressable onPress={handleCommentClick}>
-                <Text fontSize="$3" color="$gray600">
-                  💬
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </XStack>
+          {isComment && <Separator borderColor="#ffb433" />}
+        </YStack>
 
-        {isComment && <Separator borderColor="#ffb433" />}
-      </YStack>
+        {/* コメント入力 */}
+        <InputComment
+          visible={showCommentInput}
+          onClose={() => setShowCommentInput(false)}
+          onSubmit={onCommentSubmit ?? (() => {})}
+        />
+      </Pressable>
 
-      <InputComment
-        visible={showCommentInput} // isOpen -> visible
-        onClose={() => setShowCommentInput(false)}
-        onSubmit={onCommentSubmit ?? (() => {})} // onCommentSubmit -> onSubmit
+      {/* ★ 教育モーダル */}
+      <NgReason
+        isOpen={isEduOpen}
+        onClose={() => setIsEduOpen(false)}
+        reason={eduReason}
       />
-    </Pressable>
+    </>
   );
 };
 
