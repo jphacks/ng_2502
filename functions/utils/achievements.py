@@ -1,6 +1,6 @@
 # utils/achievements.py
 from firebase_admin import firestore
-import functions.config.firebase as firebase
+import config.firebase as firebase
 
 
 ALL_ACHIEVEMENTS = {

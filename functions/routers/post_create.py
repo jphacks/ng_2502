@@ -5,12 +5,12 @@ import random
 from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore as admin_firestore
 
-from functions.auth.dependencies import get_current_user
-from functions.models.post import PostCreate
-from functions.utils.achievements import count_user_posts, update_achievements
-import functions.config.firebase as firebase
-from functions.utils.predicted_likes import sample_viral_predicted_likes
-from functions.gemini_utils import (
+from auth.dependencies import get_current_user
+from models.post import PostCreate
+from utils.achievements import count_user_posts, update_achievements
+import config.firebase as firebase
+from utils.predicted_likes import sample_viral_predicted_likes
+from gemini_utils import (
     validate_and_analyze_post,
     validate_and_analyze_post_with_image,
     predict_viral,
@@ -59,6 +59,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
                 "content": payload.content,
                 "imageUrl": payload.imageUrl,
                 "replyTo": payload.replyTo,
+                "isToFollower": payload.isToFollower,
                 "timestamp": datetime.now(timezone.utc),
                 "likes": [],
                 "isSafe": False,
@@ -163,6 +164,7 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "content": payload.content,
         "imageUrl": payload.imageUrl,
         "replyTo": payload.replyTo,
+        "isToFollower": payload.isToFollower,
         "timestamp": datetime.now(timezone.utc),
         "likes": [],
         "isPositive": is_positive,

@@ -2,8 +2,8 @@
 import asyncio
 from fastapi import APIRouter, Depends
 from firebase_admin import firestore
-from functions.auth.dependencies import get_current_user
-import functions.config.firebase as firebase
+from auth.dependencies import get_current_user
+import config.firebase as firebase
 
 router = APIRouter()
 

@@ -13,12 +13,12 @@ def init_firebase():
 
     # --- ローカル（Emulator） ---
     if ENV == "local":
-        print("🔥 ローカルモード: Firebase Emulator に接続します")
+        print("ローカルモード: Firebase Emulator に接続します")
 
         os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
         os.environ["FIREBASE_AUTH_EMULATOR_HOST"] = "localhost:9099"
 
-        cred = credentials.Certificate("functions/config/serviceAccountKey.json")
+        cred = credentials.Certificate("config/serviceAccountKey.json")
 
         try:
             firebase_admin.get_app()
@@ -28,7 +28,7 @@ def init_firebase():
             })
 
         db = firestore.client()
-        print("🔥 Firestore Emulator に接続成功")
+        print("Firestore Emulator に接続成功")
         return
 
     # --- 本番（Render） ---
@@ -44,7 +44,7 @@ def init_firebase():
 
     else:
         # ローカルだけど ENV=local じゃない場合
-        cred = credentials.Certificate("functions/config/serviceAccountKey.json")
+        cred = credentials.Certificate("config/serviceAccountKey.json")
 
     try:
         firebase_admin.get_app()

@@ -5,11 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv 
 from pathlib import Path
 #fastapiライブラリから導入
-from functions.config.firebase import init_firebase
+from config.firebase import init_firebase
 
-from functions.routers import posts, likes, replies, profile, achievement, post_create
-from functions.auth.dependencies import get_current_user
-from functions.utils.predicted_likes import sample_viral_predicted_likes
+from routers import posts, likes, replies, profile, achievement, post_create, follows
+from auth.dependencies import get_current_user
+from utils.predicted_likes import sample_viral_predicted_likes
 
 #from自分のファイル名　import関数名
 #configフォルダ内のfirebase.pyからinit_firebase関数をインポート
@@ -43,11 +43,12 @@ app.include_router(replies.router)
 app.include_router(profile.router)
 app.include_router(achievement.router)
 app.include_router(post_create.router)
+app.include_router(follows.router)
 #FastAPI の include_router() は APIRouter 型のオブジェクトを受け取る関数。
 
 
 from pydantic import BaseModel
-from functions.models.post import PostCreate
+from models.post import PostCreate
 from typing import Optional, List
 # from google.cloud import firestore
 from datetime import datetime, timezone
@@ -64,7 +65,7 @@ from firebase_admin import credentials as admin_credentials, auth
 from firebase_admin import firestore as admin_firestore
 
 # gemini_utils.pyからAI関数をインポート
-from functions.gemini_utils import (
+from gemini_utils import (
     validate_and_analyze_post,  # 統合版の新関数
     predict_viral,
     generate_controversial_comments,

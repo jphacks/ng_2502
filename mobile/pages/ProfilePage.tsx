@@ -70,9 +70,23 @@ export default function ProfilePage() {
     globalIconColor || "blue",
   );
   const [mode, setMode] = useState<"てんさく" | "じゆう">("てんさく");
+  const [myUserID, setMyUserID] = useState("");
+  const [followTargetUserID, setFollowTargetUserID] = useState("");
+  const [followingUserIDs, setFollowingUserIDs] = useState<string[]>([]);
+  const [followerUserIDs, setFollowerUserIDs] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  const loadFollowLists = async (idToken: string) => {
+    const followResponse = await axios.get(`${API_BASE_URL}/follows`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    setMyUserID(followResponse.data.userID || "");
+    setFollowingUserIDs(followResponse.data.followingUserIDs || []);
+    setFollowerUserIDs(followResponse.data.followerUserIDs || []);
+  };
 
   useEffect(() => {
     /*
@@ -102,6 +116,8 @@ export default function ProfilePage() {
         setLocalUsername(response.data.username || globalUsername || "");
         setLocalIconColor(response.data.iconColor || globalIconColor || "blue");
         setMode(response.data.mode || "てんさく");
+        setMyUserID(response.data.userID || "");
+        await loadFollowLists(idToken);
       } catch (error: any) {
         console.error("🔥 プロフィールの取得に失敗:", error);
         Alert.alert(
@@ -150,6 +166,42 @@ export default function ProfilePage() {
       Alert.alert("保存エラー", error.response?.data?.detail || error.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    const targetUserID = followTargetUserID.trim();
+    if (!targetUserID) {
+      Alert.alert("入力エラー", "フォローしたい userID を入力してください");
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("エラー", "ログインが必要です");
+      return;
+    }
+
+    setIsFollowing(true);
+    try {
+      const idToken = await user.getIdToken();
+      await axios.post(
+        `${API_BASE_URL}/follow`,
+        { targetUserID },
+        { headers: { Authorization: `Bearer ${idToken}` } },
+      );
+
+      setFollowTargetUserID("");
+      await loadFollowLists(idToken);
+      Alert.alert("成功", "フォローを追加しました");
+    } catch (error: any) {
+      console.error("🔥 フォロー追加に失敗:", error);
+      Alert.alert(
+        "フォロー追加エラー",
+        error.response?.data?.detail || error.message,
+      );
+    } finally {
+      setIsFollowing(false);
     }
   };
 
@@ -261,6 +313,46 @@ export default function ProfilePage() {
               じゆう
             </ProfileButton>
           </XStack>
+        </YStack>
+
+        <YStack space="$3" paddingBottom="$10">
+          <Text color="#FFB433" fontSize={20} fontWeight="bold">
+            フォロー
+          </Text>
+          <Text color="#4B5563">あなたの userID: {myUserID || "取得中"}</Text>
+
+          <InputText
+            placeholder="追加したい userID (例: U-1A2B3C4D)"
+            value={followTargetUserID}
+            onChangeText={setFollowTargetUserID}
+            autoCapitalize="characters"
+            editable={!isFollowing && !isSaving}
+          />
+          <TextButton onPress={handleFollow} disabled={isFollowing || isSaving}>
+            {isFollowing ? "追加中..." : "userIDでフォロー追加"}
+          </TextButton>
+
+          <YStack space="$2" marginTop="$2">
+            <Text color="#111827" fontWeight="600">
+              フォロー中 ({followingUserIDs.length})
+            </Text>
+            <Text color="#6B7280">
+              {followingUserIDs.length > 0
+                ? followingUserIDs.join(", ")
+                : "まだフォローしていません"}
+            </Text>
+          </YStack>
+
+          <YStack space="$2" marginTop="$1">
+            <Text color="#111827" fontWeight="600">
+              フォロワー ({followerUserIDs.length})
+            </Text>
+            <Text color="#6B7280">
+              {followerUserIDs.length > 0
+                ? followerUserIDs.join(", ")
+                : "まだフォロワーはいません"}
+            </Text>
+          </YStack>
         </YStack>
       </YStack>
     </ScrollView>

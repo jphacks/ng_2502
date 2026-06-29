@@ -24,7 +24,7 @@ const useFirebaseEmulator =
 if (useFirebaseEmulator) {
   console.log("🔥 Firebase Emulator に接続中...");
 
-  const PC_IP = "192.168.68.55";
+  const PC_IP = "10.118.1.129";
 
   try {
     connectFirestoreEmulator(db, PC_IP, 8080);
