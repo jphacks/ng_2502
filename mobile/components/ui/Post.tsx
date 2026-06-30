@@ -16,6 +16,8 @@ import RedIcon from "../../assets/images/UserIcon_Red.png";
 import YellowIcon from "../../assets/images/UserIcon_Yellow.png";
 
 import { useUser } from "../../hooks/useUser";
+import { auth } from "../../firebase";
+import { API_BASE_URL } from "../../constants/api";
 import { CircleIcon } from "./CircleIcon";
 import { InputComment } from "./InputComment";
 import { NgReason } from "./NgReason"; // ← ★ 教育モーダルを使う
@@ -63,6 +65,8 @@ interface PostProps {
     imageUrl?: string | null;
     predictedLikes?: number;
     isAiComment?: boolean;
+    tab?: string;
+    likes?: string[];
 
     // ★ 追加：危険投稿判定
     riskLevel?: "safe" | "danger";
@@ -88,7 +92,11 @@ const Post: React.FC<PostProps> = ({
   const viewerId = currentUserId ?? email ?? undefined;
   const isOwnPost = post?.userId && viewerId ? post.userId === viewerId : false;
 
+  const isFriendsTab = post?.tab === "friends";
   const [isLiked, setIsLiked] = useState(isOwnPost ? true : false);
+  const [localLikesCount, setLocalLikesCount] = useState(
+    typeof post?.predictedLikes === "number" ? post.predictedLikes : 0
+  );
   const [showCommentInput, setShowCommentInput] = useState(false);
   const hasCommentSubmit = typeof onCommentSubmit === "function";
 
@@ -102,12 +110,34 @@ const Post: React.FC<PostProps> = ({
   const iconKey = safeUser.iconColor || "blue";
   const { src, alt } = (iconMap as any)[iconKey] || (iconMap as any).blue;
 
-  const handleLikeClick = (e: GestureResponderEvent) => {
+  const handleLikeClick = async (e: GestureResponderEvent) => {
     e.preventDefault?.();
     if (isOwnPost) return;
 
     const next = !isLiked;
     setIsLiked(next);
+
+    // ともだちタブはAPIを呼び出し、いいね数をリアルタイム更新
+    if (isFriendsTab && post.id) {
+      setLocalLikesCount((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (token) {
+          const res = await fetch(`${API_BASE_URL}/like/${post.id}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setLocalLikesCount(data.likes.length);
+          }
+        }
+      } catch {
+        // 楽観的更新を元に戻す
+        setIsLiked(!next);
+        setLocalLikesCount((prev) => (next ? Math.max(0, prev - 1) : prev + 1));
+      }
+    }
 
     // ★ いいね ON → danger のとき教育モーダル
     if (next && post.riskLevel === "danger") {
@@ -118,9 +148,12 @@ const Post: React.FC<PostProps> = ({
 
   const handlePostClick = () => {
     if (!disablePostNavigation && !isComment && post?.id) {
+      const postToPass = isFriendsTab
+        ? { ...post, predictedLikes: localLikesCount }
+        : post;
       router.push({
         pathname: "/post-detail" as any,
-        params: { postId: post.id, post: JSON.stringify(post) },
+        params: { postId: post.id, post: JSON.stringify(postToPass) },
       });
     }
   };
@@ -189,7 +222,7 @@ const Post: React.FC<PostProps> = ({
                   minWidth="$8"
                   textAlign="center"
                 >
-                  {post.predictedLikes}
+                  {isFriendsTab ? localLikesCount : post.predictedLikes}
                 </Text>
               )}
             </XStack>

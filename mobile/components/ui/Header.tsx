@@ -115,7 +115,7 @@ export const Header: React.FC<Props> = ({
       return;
     }
 
-    router.push("/profile");
+    router.push("/mypage");
   };
 
   const handleTutorialPress = () => {

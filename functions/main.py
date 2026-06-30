@@ -7,7 +7,7 @@ from pathlib import Path
 #fastapiライブラリから導入
 from functions.config.firebase import init_firebase
 
-from functions.routers import posts, likes, replies, profile, achievement, post_create,post_ai
+from functions.routers import posts, likes, replies, profile, achievement, post_create, post_ai, friends
 from functions.auth.dependencies import get_current_user
 from functions.utils.predicted_likes import sample_viral_predicted_likes
 
@@ -44,6 +44,7 @@ app.include_router(profile.router)
 app.include_router(achievement.router)
 app.include_router(post_create.router)
 app.include_router(post_ai.router)
+app.include_router(friends.router)
 #FastAPI の include_router() は APIRouter 型のオブジェクトを受け取る関数。
 
 

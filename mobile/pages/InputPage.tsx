@@ -12,6 +12,7 @@ import { API_BASE_URL } from "../constants/api";
 import { storage, auth } from "../firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useUser } from "../hooks/useUser";
+import type { TabType } from "../components/ui/TabSelector";
 import * as ImageManipulator from "expo-image-manipulator";
 
 const iconMap = {
@@ -37,7 +38,8 @@ const InputPage = () => {
   const [ngReason, setNgReason] = useState("");
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { iconColor } = useUser();
+  const { iconColor, activeTab } = useUser();
+  const [postTab, setPostTab] = useState<TabType>(activeTab);
 
   const iconUri = useMemo(() => {
     const source = iconMap[iconColor] ?? iconMap.blue;
@@ -134,6 +136,7 @@ const InputPage = () => {
           content: text,
           imageUrl,
           replyTo: null,
+          tab: postTab,
         }),
       });
 
@@ -237,6 +240,8 @@ const InputPage = () => {
             onImageSelect={setSelectedImage}
             placeholder="こんな発見したよ！"
             style={styles.postInput}
+            postTab={postTab}
+            onTabChange={setPostTab}
           />
           <XStack justifyContent="space-between" alignItems="center" mt="$2">
             <Text color={text.length > 140 ? "$red10" : "$gray10"}>

@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import random
 
 from fastapi import APIRouter, Depends, HTTPException
-from firebase_admin import firestore as admin_firestore
 
 from functions.auth.dependencies import get_current_user
 from functions.models.post import PostCreate
@@ -86,35 +85,38 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
     predicted_likes = analysis["predicted_likes"]
     is_controversial = analysis["is_controversial"]
 
-    # --- バズ判定 ---
     is_viral = False
-    if is_positive and not is_controversial:
-        is_viral = await predict_viral(payload.content, is_positive)
-        if is_viral:
-            predicted_likes = sample_viral_predicted_likes()
+    generated_comments = []
 
-    # --- AIコメント生成 ---
-    if is_controversial:
-        generated_comments = await generate_controversial_comments(payload.content, count=12)
-    elif is_viral:
-        generated_comments = await generate_viral_comments(payload.content, count=18)
-    else:
-        total_normal = len(reaction_types) + 2
+    if payload.tab != "friends":
+        # --- バズ判定 ---
+        if is_positive and not is_controversial:
+            is_viral = await predict_viral(payload.content, is_positive)
+            if is_viral:
+                predicted_likes = sample_viral_predicted_likes()
 
-        if gemini_model:
-            comment_types_description = []
-            for r_type in reaction_types:
-                if r_type == "positive":
-                    comment_types_description.append("前向きなコメント")
-                elif r_type == "neutral":
-                    comment_types_description.append("中立的なコメント")
-                elif r_type == "negative":
-                    comment_types_description.append("否定的なコメント")
+        # --- AIコメント生成 ---
+        if is_controversial:
+            generated_comments = await generate_controversial_comments(payload.content, count=12)
+        elif is_viral:
+            generated_comments = await generate_viral_comments(payload.content, count=18)
+        else:
+            total_normal = len(reaction_types) + 2
 
-            comment_types_description.append("怪しいリンク付きコメント（URL: https://myfirstfirebase-440d6.web.app/spam を含む）")
-            comment_types_description.append("あおりコメント")
+            if gemini_model:
+                comment_types_description = []
+                for r_type in reaction_types:
+                    if r_type == "positive":
+                        comment_types_description.append("前向きなコメント")
+                    elif r_type == "neutral":
+                        comment_types_description.append("中立的なコメント")
+                    elif r_type == "negative":
+                        comment_types_description.append("否定的なコメント")
 
-            unified_prompt = f"""
+                comment_types_description.append("怪しいリンク付きコメント（URL: https://myfirstfirebase-440d6.web.app/spam を含む）")
+                comment_types_description.append("あおりコメント")
+
+                unified_prompt = f"""
 あなたは小学生のSNSユーザーです。
 以下の投稿に対して、{total_normal}件のコメントを生成してください。
 
@@ -134,17 +136,17 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
 出力形式（{total_normal}件、本文のみ、改行区切り）:
 """
 
-            try:
-                response = await gemini_model.generate_content_async(unified_prompt)
-                comment_text = sanitize_ai_output(response.text.strip())
-                comments_list = [c.strip() for c in comment_text.split("\n") if c.strip()]
-                generated_comments = comments_list[:total_normal]
-                while len(generated_comments) < total_normal:
-                    generated_comments.append("いいね！😄")
-            except:
+                try:
+                    response = await gemini_model.generate_content_async(unified_prompt)
+                    comment_text = sanitize_ai_output(response.text.strip())
+                    comments_list = [c.strip() for c in comment_text.split("\n") if c.strip()]
+                    generated_comments = comments_list[:total_normal]
+                    while len(generated_comments) < total_normal:
+                        generated_comments.append("いいね！😄")
+                except:
+                    generated_comments = ["いいね！😄" for _ in range(total_normal)]
+            else:
                 generated_comments = ["いいね！😄" for _ in range(total_normal)]
-        else:
-            generated_comments = ["いいね！😄" for _ in range(total_normal)]
 
     # --- 親投稿データ（aiComments は空にする） ---
     new_post_data = {
@@ -156,10 +158,11 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
         "likes": [],
         "isPositive": is_positive,
         "predictedReplyCount": reply_count,
-        "predictedLikes": predicted_likes,
+        "predictedLikes": predicted_likes if payload.tab != "friends" else 0,
         "isControversial": is_controversial,
         "isViral": is_viral,
-        "aiComments": [],  # ← ここ重要
+        "aiComments": [],
+        "tab": payload.tab,
     }
 
     # --- Firestore 書き込み（親投稿） ---
@@ -202,7 +205,8 @@ async def create_post(payload: PostCreate, user_id: str = Depends(get_current_us
 
         batch.commit()
 
-    await loop.run_in_executor(None, write_ai_replies)
+    if generated_comments:
+        await loop.run_in_executor(None, write_ai_replies)
 
     # --- 実績更新 ---
     post_count = await loop.run_in_executor(None, lambda: count_user_posts(user_id))

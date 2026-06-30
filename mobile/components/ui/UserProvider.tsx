@@ -11,16 +11,22 @@ type IconColor =
 	| 'red'
 	| 'yellow';
 
+type TabType = "solo" | "friends";
+
 interface UserContextValue {
 	email: string;
 	iconColor: IconColor;
 	username: string;
 	postContent: string;
 	isLoading: boolean;
+	uid: string;
+	angou: string;
+	activeTab: TabType;
 	setEmail: (value: string) => void;
 	setIconColor: (value: IconColor) => void;
 	setUsername: (value: string) => void;
 	setPostContent: (value: string) => void;
+	setActiveTab: (value: TabType) => void;
 	refreshProfile: () => Promise<void>;
 }
 
@@ -28,6 +34,8 @@ type FetchProfile = () => Promise<{
 	email?: string;
 	iconColor?: IconColor;
 	username?: string;
+	uid?: string;
+	angou?: string;
 }>;
 
 interface UserProviderProps {
@@ -52,6 +60,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({
 	const [username, setUsername] = useState<string>(initialUsername);
 	const [postContent, setPostContent] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [uid, setUid] = useState<string>('');
+	const [angou, setAngou] = useState<string>('');
+	const [activeTab, setActiveTab] = useState<TabType>('solo');
 
 	const refreshProfile = useCallback(async () : Promise<void> => {
 		if (!fetchProfile) {
@@ -65,6 +76,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({
 			if (profile.email !== undefined) setEmail(profile.email);
 			if (profile.iconColor !== undefined) setIconColor(profile.iconColor);
 			if (profile.username !== undefined) setUsername(profile.username);
+			if (profile.uid !== undefined) setUid(profile.uid);
+			if (profile.angou !== undefined) setAngou(profile.angou);
 		} catch (error) {
 			// プロフィール取得に失敗した場合は既存の値を保持
 			console.warn('Failed to refresh profile', error);
@@ -91,13 +104,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({
 			username,
 			postContent,
 			isLoading,
+			uid,
+			angou,
+			activeTab,
 			setEmail,
 			setIconColor,
 			setUsername,
 			setPostContent,
+			setActiveTab,
 			refreshProfile,
 		}),
-		[email, iconColor, username, postContent, isLoading, refreshProfile]
+		[email, iconColor, username, postContent, isLoading, uid, angou, activeTab, refreshProfile]
 	);
 
 	return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
