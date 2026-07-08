@@ -33,6 +33,7 @@ type PostItem = {
   tab?: string;
   likes?: string[];
 };
+let aiGenerated = false;
 
 const ListPage = () => {
   const { activeTab, setActiveTab } = useUserContext();
@@ -40,8 +41,6 @@ const ListPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // AI投稿生成は初回認証時のみ（タブ切り替えのたびに呼ばない）
-  const aiGeneratedRef = useRef(false);
   // 初回マウント判定（useFocusEffect の初回スキップ用）
   const hasMountedRef = useRef(false);
 
@@ -49,8 +48,8 @@ const ListPage = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
 
-      if (user && !aiGeneratedRef.current) {
-        aiGeneratedRef.current = true;
+      if (user && !aiGenerated) {
+        aiGenerated = true;
         const token = await user.getIdToken();
         fetch(`${API_BASE_URL}/post/ai`, {
           method: "POST",

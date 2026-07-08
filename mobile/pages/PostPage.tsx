@@ -32,25 +32,64 @@ export default function PostPage() {
   const [isEduOpen, setIsEduOpen] = useState(false);
   const [eduReason, setEduReason] = useState("");
 
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!mainPostData?.id) {
+
+  const fetchComments = async (postId: string, options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setIsLoadingComments(true);
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/replies/${postId}`);
+      setComments(response.data || []);
+    } catch (error) {
+      console.error("🔥 コメントの取得に失敗:", error);
+      setComments([]);
+    } finally {
+      if (!options?.silent) {
         setIsLoadingComments(false);
+      }
+    }
+  };
+
+
+  useEffect(() => {
+    if (!mainPostData?.id) {
+      setIsLoadingComments(false);
+      return;
+    }
+    fetchComments(mainPostData.id);
+  }, [mainPostData?.id]);
+
+
+  useEffect(() => {
+    if (!mainPostData?.id) return;
+
+    let isMounted = true;
+    let count = 0;
+
+  
+
+    const intervalId = setInterval(() => {
+      if (!isMounted) return;
+
+      count += 1;
+
+      // 最大30秒で停止
+      if (count > 10) {
+        clearInterval(intervalId);
         return;
       }
-      setIsLoadingComments(true);
-      try {
-        const response = await axios.get(`${API_BASE_URL}/replies/${mainPostData.id}`);
-        setComments(response.data || []);
-      } catch (error) {
-        console.error("🔥 コメントの取得に失敗:", error);
-        setComments([]);
-      } finally {
-        setIsLoadingComments(false);
-      }
+
+     
+      fetchComments(mainPostData.id, { silent: true });
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
     };
-    fetchComments();
   }, [mainPostData?.id]);
+
 
   useEffect(() => {
     if (openComment) {
@@ -195,7 +234,7 @@ export default function PostPage() {
         reason={ngReason}
       />
 
-      {/* ★ 教育モーダル（今回追加） */}
+      {/* ★ 教育モーダル */}
       <NgReason
         isOpen={isEduOpen}
         onClose={() => setIsEduOpen(false)}
