@@ -3,22 +3,51 @@ import { useRouter } from "expo-router";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
   sendEmailVerification,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "../firebase";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image } from "react-native";
 import { YStack } from "tamagui";
 import { InputText } from "../components/ui/InputText";
 import { TextButton } from "../components/ui/TextButton";
 import { WhiteTextButton } from "../components/ui/WhiteTextButton";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LoginPage = () => {
   const { email, setEmail } = useUser();
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const isRegisteringRef = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        return;
+      }
+      try {
+        await user.reload();
+
+        if (!user.emailVerified) {
+          if (!isRegisteringRef.current) {
+            await signOut(auth);
+          }
+          return;
+        }
+
+        router.replace("/(tabs)/list");
+      } catch (error) {
+        console.error(
+          "❌ ユーザー情報のリロード中にエラーが発生しました:",
+          error,
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [router]);
 
   // 既存ユーザーのログイン
   const handleLogin = async () => {
@@ -32,15 +61,10 @@ const LoginPage = () => {
       await user.reload();
 
       if (!user.emailVerified) {
+        await signOut(auth);
         alert("メール認証してください");
         return;
       }
-
-      // --- ▼▼▼【重要】ここから追加 ▼▼▼ ---
-      // ログイン成功後、IDトークンを取得
-      const idToken = await userCredential.user.getIdToken();
-      await AsyncStorage.setItem("firebaseIdToken", idToken);
-      // --- ▲▲▲ ここまで追加 ▲▲▲ ---
 
       console.log("✅ ログイン成功:", userCredential.user.email);
       router.replace("/(tabs)/list"); // ログイン後ページへ
@@ -53,10 +77,12 @@ const LoginPage = () => {
   // 新規登録
   const handleRegister = async () => {
     console.log("📝 新規登録開始:", { email, passwordLength: password.length });
+    isRegisteringRef.current = true;
 
     // パスワードの長さをチェック
     if (password.length < 6) {
       alert("パスワードは6文字以上で入力してください");
+      isRegisteringRef.current = false;
       return;
     }
 
@@ -73,6 +99,7 @@ const LoginPage = () => {
       const user = userCredential.user;
       console.log("📧 メール送信開始");
       await sendEmailVerification(user);
+      await signOut(auth);
       alert("確認メールを送信しました。メール認証後にログインしてください。");
       console.log("📧 メール認証送信成功:", user.email);
     } catch (error) {
@@ -95,6 +122,8 @@ const LoginPage = () => {
       }
 
       alert(errorMessage);
+    } finally {
+      isRegisteringRef.current = false;
     }
   };
 

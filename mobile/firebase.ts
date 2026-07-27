@@ -1,7 +1,15 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  connectAuthEmulator,
+  getReactNativePersistence,
+} from "firebase/auth";
+
 import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,8 +23,32 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 const db = getFirestore(app);
-const auth = getAuth(app);
+
 const storage = getStorage(app);
+
+// SecureStore のキー名エラー（コロンなど不可）を回避するための変換関数
+const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_.-]/g, "_");
+
+// SecureStore を Firebase Persistence 形式に適合させるアダプター
+const secureStoreAdapter = {
+  getItem: (key: string) => SecureStore.getItemAsync(sanitizeKey(key)),
+  setItem: (key: string, value: string) =>
+    SecureStore.setItemAsync(sanitizeKey(key), value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(sanitizeKey(key)),
+};
+
+const auth =
+  Platform.OS === "web"
+    ? getAuth(app)
+    : (() => {
+        try {
+          return initializeAuth(app, {
+            persistence: getReactNativePersistence(secureStoreAdapter),
+          });
+        } catch {
+          return getAuth(app);
+        }
+      })();
 
 const useFirebaseEmulator =
   __DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR !== "false";
