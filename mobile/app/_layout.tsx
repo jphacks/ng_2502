@@ -33,6 +33,7 @@ export default function RootLayout() {
                 name="parentsetting"
                 options={{ headerShown: false }}
               />
+              <Stack.Screen name="mypage" options={{ headerShown: false }} />
               <Stack.Screen
                 name="post-detail"
                 options={{ headerShown: false }}

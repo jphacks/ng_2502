@@ -1,7 +1,7 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Image, StyleSheet, Alert } from "react-native";
+import { Image, StyleSheet, Alert, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Text, XStack, YStack } from "tamagui";
 import { NgReason } from "../components/ui/NgReason";
@@ -12,6 +12,7 @@ import { API_BASE_URL } from "../constants/api";
 import { storage, auth } from "../firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useUser } from "../hooks/useUser";
+import type { TabType } from "../components/ui/TabSelector";
 import * as ImageManipulator from "expo-image-manipulator";
 
 const iconMap = {
@@ -37,7 +38,8 @@ const InputPage = () => {
   const [ngReason, setNgReason] = useState("");
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { iconColor } = useUser();
+  const { iconColor, activeTab } = useUser();
+  const [postTab, setPostTab] = useState<TabType>(activeTab);
 
   const iconUri = useMemo(() => {
     const source = iconMap[iconColor] ?? iconMap.blue;
@@ -134,6 +136,7 @@ const InputPage = () => {
           content: text,
           imageUrl,
           replyTo: null,
+          tab: postTab,
         }),
       });
 
@@ -237,6 +240,8 @@ const InputPage = () => {
             onImageSelect={setSelectedImage}
             placeholder="こんな発見したよ！"
             style={styles.postInput}
+            postTab={postTab}
+            onTabChange={setPostTab}
           />
           <XStack justifyContent="space-between" alignItems="center" mt="$2">
             <Text color={text.length > 140 ? "$red10" : "$gray10"}>
@@ -244,6 +249,31 @@ const InputPage = () => {
             </Text>
           </XStack>
         </YStack>
+      </XStack>
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
       </XStack>
 
       <NgReason

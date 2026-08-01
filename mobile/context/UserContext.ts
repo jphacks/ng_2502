@@ -1,5 +1,7 @@
 import { createContext } from "react";
 
+export type TabType = "solo" | "friends";
+
 export interface UserContextType {
   email: string;
   setEmail: (email: string) => void;
@@ -12,6 +14,10 @@ export interface UserContextType {
   postContent: string;
   setPostContent: (content: string) => void;
   isLoading: boolean;
+  uid: string;
+  angou: string;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(

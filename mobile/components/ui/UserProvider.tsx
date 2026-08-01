@@ -18,6 +18,8 @@ type IconColor =
   | "red"
   | "yellow";
 
+type TabType = "solo" | "friends";
+
 interface UserContextValue {
   email: string;
   iconColor: IconColor;
@@ -25,11 +27,15 @@ interface UserContextValue {
   comment: string;
   postContent: string;
   isLoading: boolean;
+  uid: string;
+  angou: string;
+  activeTab: TabType;
   setEmail: (value: string) => void;
   setIconColor: (value: IconColor) => void;
   setUsername: (value: string) => void;
   setComment: (value: string) => void;
   setPostContent: (value: string) => void;
+  setActiveTab: (value: TabType) => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -38,6 +44,8 @@ type FetchProfile = () => Promise<{
   iconColor?: IconColor;
   username?: string;
   comment?: string;
+  uid?: string;
+  angou?: string;
 }>;
 
 interface UserProviderProps {
@@ -65,6 +73,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({
   const [comment, setComment] = useState<string>(initialComment);
   const [postContent, setPostContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [uid, setUid] = useState<string>("");
+  const [angou, setAngou] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<TabType>("solo");
 
   const refreshProfile = useCallback(async (): Promise<void> => {
     if (!fetchProfile) {
@@ -79,6 +90,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({
       if (profile.iconColor !== undefined) setIconColor(profile.iconColor);
       if (profile.username !== undefined) setUsername(profile.username);
       if (profile.comment !== undefined) setComment(profile.comment);
+      if (profile.uid !== undefined) setUid(profile.uid);
+      if (profile.angou !== undefined) setAngou(profile.angou);
     } catch (error) {
       // プロフィール取得に失敗した場合は既存の値を保持
       console.warn("Failed to refresh profile", error);
@@ -106,11 +119,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({
       comment,
       postContent,
       isLoading,
+      uid,
+      angou,
+      activeTab,
       setEmail,
       setIconColor,
       setUsername,
       setComment,
       setPostContent,
+      setActiveTab,
       refreshProfile,
     }),
     [
@@ -120,6 +137,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({
       comment,
       postContent,
       isLoading,
+      uid,
+      angou,
+      activeTab,
       refreshProfile,
     ],
   );

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Pressable,
 } from "react-native";
 import { ProfileButton } from "@/components/ui/ProfileButton";
 import axios from "axios";
@@ -15,6 +16,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { WhiteTextButton } from "@/components/ui/WhiteTextButton";
 import { TextButton } from "@/components/ui/TextButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FontAwesome } from "@expo/vector-icons";
 
 export default function ModePage() {
   const router = useRouter();
@@ -177,7 +179,7 @@ export default function ModePage() {
 
       console.log("✅ プロフィール更新成功:", response.data);
       Alert.alert("成功", "モード設定を保存しました");
-      router.replace("/profile"); // 完了後は一覧画面へ遷移
+      router.replace("/mypage"); // 完了後は一覧画面へ遷移
     } catch (error: any) {
       console.error("🔥 モード設定の更新に失敗しました:", error);
       //コメントが不適切な場合は、APIからのエラーメッセージを表示する
@@ -321,6 +323,31 @@ export default function ModePage() {
           </TouchableOpacity>
         </YStack>
       </ScrollView>
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
+      </XStack>
     </>
   );
 }

@@ -10,12 +10,15 @@ import {
 import { Text, XStack, YStack } from "tamagui";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 
 export interface SelectedImage {
   uri: string;
   name: string;
   fileSize?: number;
 }
+
+type TabType = "solo" | "friends";
 
 interface PostInputProps {
   value?: string;
@@ -26,6 +29,8 @@ interface PostInputProps {
   editable?: boolean;
   multiline?: boolean;
   numberOfLines?: number;
+  postTab?: TabType;
+  onTabChange?: (tab: TabType) => void;
   [key: string]: any;
 }
 
@@ -38,6 +43,8 @@ export const PostInput: React.FC<PostInputProps> = ({
   editable = true,
   multiline = true,
   numberOfLines = 5,
+  postTab,
+  onTabChange,
   ...rest
 }) => {
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
@@ -119,13 +126,38 @@ export const PostInput: React.FC<PostInputProps> = ({
         {...rest}
       />
 
-      {/* 画像選択ボタン */}
+      {/* 画像選択ボタン＋タブ選択 */}
       <XStack space="$2" alignItems="center">
         <Pressable onPress={pickImage} style={styles.imageButton}>
           <XStack space="$2" alignItems="center">
             <Feather name="image" size={20} color="#80CBC4" />
           </XStack>
         </Pressable>
+
+        {onTabChange && (
+          <>
+            <Pressable
+              onPress={() => onTabChange("solo")}
+              style={[styles.tabButton, postTab === "solo" && styles.tabButtonActive]}
+            >
+              <FontAwesome
+                name="user"
+                size={18}
+                color={postTab === "solo" ? "#FFB433" : "#D0D0D0"}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => onTabChange("friends")}
+              style={[styles.tabButton, postTab === "friends" && styles.tabButtonActive]}
+            >
+              <FontAwesome
+                name="users"
+                size={18}
+                color={postTab === "friends" ? "#FFB433" : "#D0D0D0"}
+              />
+            </Pressable>
+          </>
+        )}
 
         {selectedImage && (
           <Text fontSize="$2" color="$gray600">
@@ -168,6 +200,17 @@ const styles = StyleSheet.create({
     borderColor: "#80CBC4",
     borderRadius: 8,
     backgroundColor: "#fff",
+  },
+  tabButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#D0D0D0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  tabButtonActive: {
+    borderColor: "#FFB433",
   },
   imagePreviewContainer: {
     position: "relative",

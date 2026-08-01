@@ -13,7 +13,7 @@ async def get_replies(post_id: str):
 
     def fetch():
         docs = (
-            firebase.db.collection("posts")   # ← 修正ポイント①
+            firebase.db.collection("posts")
             .where("replyTo", "==", post_id)
             .order_by("timestamp")
             .stream()
@@ -25,11 +25,16 @@ async def get_replies(post_id: str):
             reply_data = doc.to_dict()
             reply_data["id"] = doc.id
 
-            # ユーザー情報を取得
+            # ★ AIコメントは user が埋め込まれているので users 参照しない
+            if reply_data.get("isAiComment") is True and "user" in reply_data:
+                replies_list.append(reply_data)
+                continue
+
+            # ★ 手動コメントだけ users コレクションから user を取得
             user_id = reply_data.get("userId")
             if user_id:
                 try:
-                    user_ref = firebase.db.collection("users").document(user_id)  # ← 修正ポイント②
+                    user_ref = firebase.db.collection("users").document(user_id)
                     user_doc = user_ref.get()
 
                     if user_doc.exists:

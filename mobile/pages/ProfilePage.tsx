@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, TouchableOpacity } from "react-native";
+import { Alert, ScrollView, TouchableOpacity, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spinner, Text, View, XStack, YStack } from "tamagui";
 
@@ -15,6 +15,7 @@ import { ProfileButton } from "@/components/ui/ProfileButton";
 import { ProfileIcon } from "@/components/ui/ProfileIcon";
 import { TextButton } from "@/components/ui/TextButton";
 import { WhiteTextButton } from "@/components/ui/WhiteTextButton";
+import { FontAwesome } from "@expo/vector-icons";
 
 const iconMap: Record<string, { src: any; alt: string }> = {
   blue: { src: require("@/assets/images/UserIcon_Blue.png"), alt: "Blue Icon" },
@@ -102,6 +103,15 @@ export default function ProfilePage() {
         console.log("❌ ユーザーが認証されていません");
         Alert.alert("エラー", "ログインが必要です");
         router.replace("/login"); // 戻れないように遷移
+        return;
+      }
+
+      // メール認証が完了しているか確認
+      await user.reload();
+      if (!user.emailVerified) {
+        console.log("❌ メール未認証");
+        alert("メール認証してください");
+        router.replace("/login");
         return;
       }
 
@@ -443,6 +453,30 @@ export default function ProfilePage() {
           </YStack> */}
         </YStack>
       </ScrollView>
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
+      </XStack>
     </>
   );
 }

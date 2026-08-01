@@ -1,5 +1,12 @@
 import { useState, useCallback } from "react";
-import { TextInput, Alert, Switch, ScrollView } from "react-native";
+import {
+  TextInput,
+  Alert,
+  Switch,
+  ScrollView,
+  Pressable,
+  TouchableOpacity,
+} from "react-native";
 import { Text, YStack, XStack } from "tamagui";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +15,7 @@ import { TextButton } from "@/components/ui/TextButton";
 import { auth } from "@/firebase";
 import axios from "axios";
 import { API_BASE_URL } from "@/constants/api";
+import { FontAwesome } from "@expo/vector-icons";
 
 export default function ModePage() {
   const router = useRouter();
@@ -320,8 +328,13 @@ export default function ModePage() {
           </XStack>
 
           {/*タイトル*/}
-          <YStack alignItems="center" space="$4" paddingBottom="$8">
-            <Text color="#FFB433" fontSize={20} fontWeight="bold">
+          <YStack alignItems="center" space="$4" paddingBottom="$2">
+            <Text
+              color="#FFB433"
+              fontSize={40}
+              fontWeight="bold"
+              textAlign="center"
+            >
               保護者用{"\n"}パスワード設定
             </Text>
           </YStack>
@@ -341,6 +354,8 @@ export default function ModePage() {
                 padding: 14,
                 fontSize: 20,
                 backgroundColor: "white",
+                width: "80%",
+                alignSelf: "center",
               }}
             />
           )}
@@ -359,37 +374,99 @@ export default function ModePage() {
               padding: 14,
               fontSize: 20,
               backgroundColor: "white",
+              width: "80%",
+              alignSelf: "center",
             }}
           />
 
-          <TextButton onPress={handlePinSubmit}>完了</TextButton>
+          <TouchableOpacity
+            onPress={handlePinSubmit}
+            style={{
+              backgroundColor: "#F5A623",
+              paddingVertical: 10,
+              paddingHorizontal: 40,
+              borderRadius: 40,
+              width: "50%",
+              alignSelf: "center",
+            }}
+          >
+            <Text
+              color="white"
+              fontSize={22}
+              fontWeight="bold"
+              textAlign="center"
+            >
+              完了
+            </Text>
+          </TouchableOpacity>
+
+          {/*<TextButton style={{ borderRadius: 20 }} onPress={handlePinSubmit}>
+            完了
+          </TextButton>*/}
 
           {/* ON/OFF設定 */}
-          <YStack space="$5" marginTop="$6">
-            <Text fontSize={28} fontWeight="bold">
+          <YStack space="$5">
+            <Text
+              fontSize={25}
+              fontWeight="bold"
+              justifyContent="center"
+              alignItems="center"
+              textAlign="center"
+            >
               パスワードをかける
             </Text>
 
-            <XStack justifyContent="space-between" alignItems="center">
-              <Text fontSize={24}>モード切り替え</Text>
+            <YStack>
+              <XStack alignItems="center" justifyContent="center">
+                <Text marginLeft={10} fontSize={24}>
+                  モード切り替え
+                </Text>
 
-              <Switch
-                value={currentModeLock}
-                onValueChange={setCurrentModeLock}
-              />
-            </XStack>
+                <Switch
+                  value={currentModeLock}
+                  onValueChange={setCurrentModeLock}
+                />
+              </XStack>
 
-            <XStack justifyContent="space-between" alignItems="center">
-              <Text fontSize={24}>ともだち追加</Text>
+              <XStack alignItems="center" justifyContent="center">
+                <Text marginLeft={10} fontSize={24}>
+                  ともだち追加
+                </Text>
 
-              <Switch
-                value={currentFriendLock}
-                onValueChange={setCurrentFriendLock}
-              />
-            </XStack>
+                <Switch
+                  value={currentFriendLock}
+                  onValueChange={setCurrentFriendLock}
+                />
+              </XStack>
+            </YStack>
           </YStack>
         </YStack>
       </ScrollView>
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
+      </XStack>
     </>
   );
 }
