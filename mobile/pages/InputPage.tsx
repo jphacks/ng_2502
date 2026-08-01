@@ -1,7 +1,7 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Image, StyleSheet, Alert } from "react-native";
+import { Image, StyleSheet, Alert, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Text, XStack, YStack } from "tamagui";
 import { NgReason } from "../components/ui/NgReason";
@@ -249,6 +249,31 @@ const InputPage = () => {
             </Text>
           </XStack>
         </YStack>
+      </XStack>
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
       </XStack>
 
       <NgReason

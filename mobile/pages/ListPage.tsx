@@ -1,6 +1,7 @@
 import { onAuthStateChanged, User } from "firebase/auth";
+import { FontAwesome } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView } from "react-native";
+import { ActivityIndicator, ScrollView, Pressable } from "react-native";
 import { Text, YStack } from "tamagui";
 import { useFocusEffect } from "expo-router";
 import { Header } from "../components/ui/Header";
@@ -9,6 +10,9 @@ import { TabSelector } from "../components/ui/TabSelector";
 import { useUserContext } from "../components/ui/UserProvider";
 import { API_BASE_URL } from "../constants/api";
 import { auth } from "../firebase";
+import { XStack } from "tamagui";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type IconColor =
   | "blue"
@@ -36,6 +40,8 @@ type PostItem = {
 let aiGenerated = false;
 
 const ListPage = () => {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { activeTab, setActiveTab } = useUserContext();
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +83,7 @@ const ListPage = () => {
         const includeFriends = activeTab === "friends";
         const response = await fetch(
           `${API_BASE_URL}/posts?includeFriends=${includeFriends}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await response.json();
         if (!cancelled) setPosts(Array.isArray(data) ? data : []);
@@ -108,41 +114,68 @@ const ListPage = () => {
           const includeFriends = activeTab === "friends";
           const res = await fetch(
             `${API_BASE_URL}/posts?includeFriends=${includeFriends}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            { headers: { Authorization: `Bearer ${token}` } },
           );
           const data = await res.json();
           if (Array.isArray(data)) setPosts(data);
         } catch {}
       })();
-    }, [currentUser, activeTab])
+    }, [currentUser, activeTab]),
   );
 
   return (
-    <YStack flex={1}>
-      <Header />
-      <TabSelector activeTab={activeTab} onTabChange={setActiveTab} />
-      {loading ? (
-        <YStack flex={1} justifyContent="center" alignItems="center">
-          <ActivityIndicator size="large" color="#FFB433" />
-        </YStack>
-      ) : posts.length === 0 ? (
-        <YStack flex={1} justifyContent="center" alignItems="center" py="$6">
-          <Text color="$gray8">まだ投稿がありません。</Text>
-        </YStack>
-      ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 12 }}
-        >
-          {posts.map((post, index) => (
-            <Post
-              key={post.id ?? `${post.userId ?? "anon"}-${index}`}
-              post={post}
-            />
-          ))}
-        </ScrollView>
-      )}
-    </YStack>
+    <>
+      <YStack flex={1}>
+        <Header />
+        <TabSelector activeTab={activeTab} onTabChange={setActiveTab} />
+        {loading ? (
+          <YStack flex={1} justifyContent="center" alignItems="center">
+            <ActivityIndicator size="large" color="#FFB433" />
+          </YStack>
+        ) : posts.length === 0 ? (
+          <YStack flex={1} justifyContent="center" alignItems="center" py="$6">
+            <Text color="$gray8">まだ投稿がありません。</Text>
+          </YStack>
+        ) : (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 12 }}
+          >
+            {posts.map((post, index) => (
+              <Post
+                key={post.id ?? `${post.userId ?? "anon"}-${index}`}
+                post={post}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </YStack>
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
+      </XStack>
+    </>
   );
 };
 

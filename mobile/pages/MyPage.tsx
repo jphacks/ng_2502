@@ -3,11 +3,24 @@ import axios from "axios";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView } from "react-native";
+import { Alert, Pressable, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, Image, Separator, Spinner, Text, View, XStack, YStack } from "tamagui";
+import {
+  Button,
+  Image,
+  Separator,
+  Spinner,
+  Text,
+  View,
+  XStack,
+  YStack,
+} from "tamagui";
+import { Pencil, Settings } from "@tamagui/lucide-icons";
 import { FriendSearchModal } from "@/components/ui/FriendSearchModal";
+import { useUser } from "@/hooks/useUser";
 import { useFriends, FriendUser } from "@/hooks/useFriends";
+import { WhiteTextButton } from "@/components/ui/WhiteTextButton";
+import { ProfileIcon } from "@/components/ui/ProfileIcon";
 import { auth } from "@/firebase";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -26,7 +39,13 @@ const iconMap: Record<string, any> = {
 const AVATAR_SIZE = 64;
 const FRIEND_AVATAR_SIZE = 44;
 
-const Avatar = ({ iconColor, size = AVATAR_SIZE }: { iconColor: string; size?: number }) => (
+const Avatar = ({
+  iconColor,
+  size = AVATAR_SIZE,
+}: {
+  iconColor: string;
+  size?: number;
+}) => (
   <Image
     source={iconMap[iconColor] ?? iconMap.blue}
     width={size}
@@ -36,7 +55,12 @@ const Avatar = ({ iconColor, size = AVATAR_SIZE }: { iconColor: string; size?: n
 );
 
 const FriendRow = ({ friend }: { friend: FriendUser }) => (
-  <XStack alignItems="center" gap="$3" paddingVertical="$2" paddingHorizontal="$4">
+  <XStack
+    alignItems="center"
+    gap="$3"
+    paddingVertical="$2"
+    paddingHorizontal="$4"
+  >
     <Avatar iconColor={friend.iconColor} size={FRIEND_AVATAR_SIZE} />
     <Text fontSize="$4" color="$gray12">
       {friend.username}
@@ -78,7 +102,9 @@ const RequestRow = ({
 );
 
 type Profile = {
+  //いったんこれに合わせる
   username: string;
+  comment: string;
   iconColor: string;
   mode: string;
   angou: string;
@@ -90,14 +116,21 @@ export default function MyPage() {
 
   const [profile, setProfile] = useState<Profile>({
     username: "",
+    comment: "",
     iconColor: "blue",
     mode: "",
     angou: "",
   });
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
-  const { friends, friendRequests, isLoading, fetchFriends, sendFriendRequest, acceptFriendRequest } =
-    useFriends();
+  const {
+    friends,
+    friendRequests,
+    isLoading,
+    fetchFriends,
+    sendFriendRequest,
+    acceptFriendRequest,
+  } = useFriends();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
@@ -105,6 +138,8 @@ export default function MyPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        console.log("❌ ユーザーが認証されていません");
+        Alert.alert("エラー", "ログインが必要です");
         router.replace("/login");
         return;
       }
@@ -115,6 +150,7 @@ export default function MyPage() {
         });
         setProfile({
           username: res.data.username ?? "",
+          comment: res.data.comment ?? "",
           iconColor: res.data.iconColor ?? "blue",
           mode: res.data.mode ?? "",
           angou: res.data.angou ?? "",
@@ -145,7 +181,12 @@ export default function MyPage() {
 
   if (isProfileLoading) {
     return (
-      <View flex={1} justifyContent="center" alignItems="center" backgroundColor="white">
+      <View
+        flex={1}
+        justifyContent="center"
+        alignItems="center"
+        backgroundColor="white"
+      >
         <Spinner size="large" color="$orange10" />
       </View>
     );
@@ -164,12 +205,15 @@ export default function MyPage() {
         <Pressable onPress={() => router.back()}>
           <FontAwesome name="chevron-left" size={20} color="#FFB433" />
         </Pressable>
-        <Pressable onPress={() => router.push("/profile")}>
+        <Pressable onPress={() => router.push("/modeset")}>
           <FontAwesome name="cog" size={22} color="#FFB433" />
         </Pressable>
       </XStack>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
+      >
         {/* プロフィール */}
         <YStack alignItems="center" paddingTop="$4" paddingBottom="$5" gap="$2">
           <Avatar iconColor={profile.iconColor} size={AVATAR_SIZE} />
@@ -181,6 +225,9 @@ export default function MyPage() {
               <FontAwesome name="pencil" size={16} color="#FFB433" />
             </Pressable>
           </XStack>
+          <Text fontSize="$3" color="$gray9">
+            {profile.comment || "コメントはまだ設定されていません"}
+          </Text>
           {profile.mode ? (
             <Text fontSize="$3" color="$gray8">
               {profile.mode}モード
@@ -254,7 +301,9 @@ export default function MyPage() {
               </Text>
             </YStack>
           ) : (
-            friends.map((friend) => <FriendRow key={friend.uid} friend={friend} />)
+            friends.map((friend) => (
+              <FriendRow key={friend.uid} friend={friend} />
+            ))
           )}
         </YStack>
       </ScrollView>

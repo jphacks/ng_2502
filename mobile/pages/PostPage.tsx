@@ -1,10 +1,19 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, H4, Separator, Spinner, Text, View, YStack, XStack } from "tamagui";
+import {
+  Button,
+  H4,
+  Separator,
+  Spinner,
+  Text,
+  View,
+  YStack,
+  XStack,
+} from "tamagui";
 
 import { InputComment } from "@/components/ui/InputComment";
 import { NgReason } from "@/components/ui/NgReason";
@@ -32,8 +41,10 @@ export default function PostPage() {
   const [isEduOpen, setIsEduOpen] = useState(false);
   const [eduReason, setEduReason] = useState("");
 
-
-  const fetchComments = async (postId: string, options?: { silent?: boolean }) => {
+  const fetchComments = async (
+    postId: string,
+    options?: { silent?: boolean },
+  ) => {
     if (!options?.silent) {
       setIsLoadingComments(true);
     }
@@ -51,7 +62,6 @@ export default function PostPage() {
     }
   };
 
-
   useEffect(() => {
     if (!mainPostData?.id) {
       setIsLoadingComments(false);
@@ -60,14 +70,11 @@ export default function PostPage() {
     fetchComments(mainPostData.id);
   }, [mainPostData?.id]);
 
-
   useEffect(() => {
     if (!mainPostData?.id) return;
 
     let isMounted = true;
     let count = 0;
-
-  
 
     const intervalId = setInterval(() => {
       if (!isMounted) return;
@@ -80,7 +87,6 @@ export default function PostPage() {
         return;
       }
 
-     
       fetchComments(mainPostData.id, { silent: true });
     }, 3000);
 
@@ -89,7 +95,6 @@ export default function PostPage() {
       clearInterval(intervalId);
     };
   }, [mainPostData?.id]);
-
 
   useEffect(() => {
     if (openComment) {
@@ -121,7 +126,7 @@ export default function PostPage() {
       // コメント再取得
       setIsLoadingComments(true);
       const refreshResponse = await axios.get(
-        `${API_BASE_URL}/replies/${mainPostData.id}`
+        `${API_BASE_URL}/replies/${mainPostData.id}`,
       );
       setComments(refreshResponse.data || []);
       setIsLoadingComments(false);
@@ -133,9 +138,11 @@ export default function PostPage() {
         setEduReason(mainPostData.riskReason ?? "");
         setIsEduOpen(true);
       }
-
     } catch (error: any) {
-      console.error("🔥 投稿エラー詳細:", error.response?.data || error.message);
+      console.error(
+        "🔥 投稿エラー詳細:",
+        error.response?.data || error.message,
+      );
 
       const status = error.response?.status;
       const detail = error.response?.data?.detail;
@@ -145,7 +152,10 @@ export default function PostPage() {
         setNgReason(extracted || detail);
         setIsNgOpen(true);
       } else {
-        Alert.alert("エラー", "投稿に失敗しました。通信状況を確認してください。");
+        Alert.alert(
+          "エラー",
+          "投稿に失敗しました。通信状況を確認してください。",
+        );
       }
     }
   };
@@ -240,6 +250,31 @@ export default function PostPage() {
         onClose={() => setIsEduOpen(false)}
         reason={eduReason}
       />
+
+      {/* ボトムナビゲーション */}
+      <XStack
+        position="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+        paddingBottom={insets.bottom + 8}
+        paddingTop="$3"
+        backgroundColor="white"
+        borderTopWidth={1}
+        borderTopColor="$gray3"
+        justifyContent="space-around"
+        alignItems="center"
+      >
+        <Pressable>
+          <FontAwesome name="bell-o" size={24} color="#FFB433" />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(tabs)/list")}>
+          <FontAwesome name="home" size={26} color="#FFB433" />
+        </Pressable>
+        <Pressable>
+          <FontAwesome name="comment-o" size={24} color="#FFB433" />
+        </Pressable>
+      </XStack>
     </View>
   );
 }

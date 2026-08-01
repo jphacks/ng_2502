@@ -9,6 +9,8 @@ export interface UserContextType {
   setIconColor: (color: string) => void;
   username: string;
   setUsername: (username: string) => void;
+  comment: string;
+  setComment: (comment: string) => void;
   postContent: string;
   setPostContent: (content: string) => void;
   isLoading: boolean;

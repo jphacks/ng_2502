@@ -21,7 +21,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 from functions.auth.dependencies import get_current_user
 from functions.models.profile import ProfileUpdate
+from functions.gemini_utils import (validate_comment)
+from pydantic import BaseModel
+
+# プロフィール取得API
 import functions.config.firebase as firebase
+
+from passlib.context import CryptContext #パスワードハッシュ化
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter()
 
@@ -62,6 +69,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
             angou = _generate_unique_angou(firebase.db)
             data = {
                 "username": "新しいユーザー",
+                "comment": "ひとこと",
                 "iconColor": "blue",
                 "mode": "てんさく",
                 "angou": angou,
@@ -73,18 +81,52 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         data["uid"] = user_id
         return data
 
+        data["hasParentPassword"] = "parentPasswordHash" in data
+        return data
     profile_data = await loop.run_in_executor(None, fetch_user_profile)
-
-    if profile_data is None:
-        raise HTTPException(status_code=404, detail="User profile not found")
-
     return profile_data
+    
 
-
+# プロフィール更新API
 @router.put("/profile")
 async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user)):
     loop = asyncio.get_running_loop()
-    profile_data = payload.dict()
+    profile_data = payload.dict(exclude_none=True)
+
+     # コメント取得
+    comment = profile_data.get("comment", "")
+
+    def fetch_user():
+        user_ref = firebase.db.collection("users").document(user_id)
+        doc = user_ref.get()
+
+        if doc.exists:
+            return doc.to_dict()
+
+        return {}
+    user_data = await loop.run_in_executor(None, fetch_user)
+
+    mode = profile_data.get("mode", "てんさく")
+
+    # AI分析
+    analysis_result = await validate_comment(
+        comment,
+        require_safety_check=(mode == "てんさく")
+    )
+
+    # てんさくモードの場合はコメントの安全性チェックを実行
+    if mode == "てんさく" and not analysis_result["is_safe"]:
+        raise HTTPException(status_code=400, detail= analysis_result['safety_reason'])
+    
+    # AI分析結果をFirestore保存用データに追加
+    profile_data["commentAnalysis"] = {
+        "is_safe": analysis_result["is_safe"],
+        "safety_reason": analysis_result["safety_reason"],
+        "is_positive": analysis_result["is_positive"],
+        "is_controversial": analysis_result["is_controversial"]
+    }
+
+
 
     def write_user_profile():
         user_ref = firebase.db.collection("users").document(user_id)
@@ -98,3 +140,137 @@ async def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_curr
     except Exception as e:
         print("プロフィール更新エラー:", e)
         raise HTTPException(status_code=500, detail="プロフィール更新に失敗しました")
+
+class ParentPassword(BaseModel):
+    password: str
+
+
+@router.post("/profile/parent-password")
+async def set_parent_password(payload: ParentPassword, user_id: str = Depends(get_current_user)):
+
+    # 4桁数字チェック
+    if not payload.password.isdigit():
+        raise HTTPException(
+            status_code=400,
+            detail="PINは数字のみです"
+        )
+
+    if len(payload.password) != 4:
+        raise HTTPException(
+            status_code=400,
+            detail="PINは4桁です"
+        )
+    
+    # デバッグ用ログ
+    print(payload.password)
+    print(type(payload.password))
+    print(len(payload.password))
+
+    hashed = pwd_context.hash(payload.password)
+
+    def write_password():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "parentPasswordHash": hashed
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_password)
+
+    return {"message": "password set"}
+
+class VerifyPassword(BaseModel):
+    password: str
+
+
+@router.post("/profile/verify-parent-password")
+async def verify_parent_password(payload: VerifyPassword, user_id: str = Depends(get_current_user)):
+
+    def fetch_password():
+        user_ref = firebase.db.collection("users").document(user_id)
+        doc = user_ref.get()
+        return doc.to_dict().get("parentPasswordHash")
+
+    loop = asyncio.get_running_loop()
+    stored_hash = await loop.run_in_executor(None, fetch_password)
+
+    if not stored_hash:
+        raise HTTPException(status_code=400, detail="password not set")
+
+    if pwd_context.verify(payload.password, stored_hash):
+        return {"success": True}
+
+    raise HTTPException(status_code=401, detail="wrong password")
+#パスワードがあるかどうかを返すAPI
+@router.get("/profile/has-parent-password")
+async def has_parent_password(user_id: str = Depends(get_current_user)):
+    user = firebase.db.collection("users").document(user_id)
+    doc = user.get()
+
+    return {
+        "has_parent_password": bool(doc.get("parentPasswordHash"))
+    }
+
+class ModeLockRequest(BaseModel):
+    mode_lock: bool
+
+#modeのロック状態を保存するAPI
+@router.post("/profile/mode-lock")
+async def set_mode_lock(payload: ModeLockRequest, user_id: str = Depends(get_current_user)):
+    def write_mode_lock():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "mode_lock": payload.mode_lock
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_mode_lock)
+
+    return {"message": "mode lock updated"}
+
+#modeのロック状態を取得するAPI
+@router.get("/profile/get-mode-lock")
+async def get_mode_lock(user_id: str = Depends(get_current_user)):
+    user_ref = firebase.db.collection("users").document(user_id)
+    doc = user_ref.get()
+    if not doc.exists:
+        return {"mode_lock": True}
+
+    user_data = doc.to_dict()
+
+    return {
+        "mode_lock": user_data.get("mode_lock", True)
+    }
+
+
+class FriendLockRequest(BaseModel):
+    friend_lock: bool
+
+#friendのロック状態を保存するAPI
+@router.post("/profile/friend-lock")
+async def set_friend_lock(payload: FriendLockRequest, user_id: str = Depends(get_current_user)):
+    def write_friend_lock():
+        user_ref = firebase.db.collection("users").document(user_id)
+        user_ref.set({
+            "friend_lock": payload.friend_lock
+        }, merge=True)
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, write_friend_lock)
+
+    return {"message": "friend lock updated"}
+
+#friendのロック状態を取得するAPI
+@router.get("/profile/get-friend-lock")
+async def get_friend_lock(user_id: str = Depends(get_current_user)):
+    user_ref = firebase.db.collection("users").document(user_id)
+    doc = user_ref.get()
+    if not doc.exists:
+        return {"friend_lock": True}
+
+    user_data = doc.to_dict()
+
+    return {
+        "friend_lock": user_data.get("friend_lock", True)
+    }
+
