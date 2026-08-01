@@ -210,14 +210,18 @@ async def validate_and_analyze_post_with_image(text: str, image_url: str, requir
         return await validate_and_analyze_post(text, require_safety_check)
 
 
-async def validate_and_analyze_post(text: str, require_safety_check: bool = True) -> dict:
+async def validate_and_analyze_post(text: str, require_safety_check: bool = True, rule_signals: dict | None = None) -> dict:
     """
     投稿の安全性チェックと包括的分析を1回のAPI呼び出しで実行。
-    
+
     Args:
         text: 投稿内容
         require_safety_check: True=てんさくモード（安全チェック必要）、False=じゆうモード（分析のみ）
-    
+        rule_signals: functions.safety.pipeline.analyze_post_safety(...).to_gemini_input() の結果。
+            渡された場合、事前のルールベース判定エンジン（辞書・正規表現・形態素解析）の結果を踏まえて
+            Geminiに最終判定をさせる（仕様書 docs/spec_post_safety_check.md 10章）。
+            Noneの場合は従来どおりGeminiのみで判定する（後方互換）。
+
     戻り値: {
         "is_safe": bool,
         "safety_reason": str,
@@ -249,8 +253,63 @@ async def validate_and_analyze_post(text: str, require_safety_check: bool = True
             "is_controversial": False
         }
 
-    if require_safety_check:
-        # てんさくモード：安全性チェック + 包括的分析
+    if require_safety_check and rule_signals:
+        # てんさくモード：事前のルールベース判定エンジンの結果を踏まえた最終判定 + 包括的分析
+        detected = rule_signals.get("detected", [])
+        risk = rule_signals.get("risk", {})
+        combination_flags = rule_signals.get("combination_flags", [])
+        advice_text = rule_signals.get("advice_text", "")
+        prompt = f"""
+あなたは小学生向けSNSの分析AIです。以下の投稿と、事前の解析エンジンによるリスク判定結果をもとに、
+最終判定を行いJSON形式で結果を返してください。
+
+投稿: "{text}"
+
+【事前解析結果（辞書・正規表現・形態素解析による判定）】
+- 検出されたカテゴリ: {", ".join(detected) if detected else "なし"}
+- カテゴリ別リスクスコア: {json.dumps(risk, ensure_ascii=False)}
+- 情報の組み合わせ判定: {", ".join(combination_flags) if combination_flags else "なし"}
+- 参考アドバイス（子ども向けテンプレート案、そのまま使わず自然な文章に整えること）:
+{advice_text if advice_text else "なし"}
+
+【最終判定】
+上記の事前解析結果を踏まえて、この投稿が小学生向けSNSに投稿してよい内容かis_safeとして最終判定してください。
+- 検出カテゴリがあり、スコアが高い場合や組み合わせ判定がある場合は、原則としてis_safe=falseと判定する
+- 文脈上問題ない誤検知だと判断できる場合は、is_safe=trueとしてよい
+- is_safeがfalseの場合、safety_reasonには「参考アドバイス」を土台に、ひらがな・カタカナを中心とした
+  自然で分かりやすい一言に整えて書くこと（テンプレートの文言そのままの丸写しは避ける）
+
+【詳細分析（安全な場合のみ）】
+1. is_positive: この投稿は読んだ人を明るい気持ちにしますか？ (true/false)
+2. reply_count: コメントが何件付くと予測されますか？ (3〜10の整数)
+3. reaction_types: コメントのタイプをカンマ区切りで予測
+   - タイプは positive / negative / neutral のいずれか
+   - reply_countと同じ数だけ生成
+4. predicted_likes: 「いいね」が何件つくと予測されますか？ (0〜100の整数)
+5. is_controversial: この投稿が炎上するリスクがありますか？ (true/false)
+   判定基準:
+   - 個人情報が含まれている
+   - 特定の人物や集団への攻撃的な内容
+   - 差別的な表現や偏見
+   - センシティブなトピック（政治、宗教、人種など）
+   - 誤解を招きやすい誇張表現
+
+出力形式（JSONのみ、他の文章は不要）:
+{{
+  "is_safe": true,
+  "safety_reason": "",
+  "is_positive": true,
+  "reply_count": 5,
+  "reaction_types": "positive, neutral, positive, neutral, positive",
+  "predicted_likes": 25,
+  "is_controversial": false
+}}
+
+※ is_safe が false の場合、safety_reason にひらがな・カタカナのみで簡単な言葉で理由を書いてください。
+※ is_safe が false の場合、他の項目はデフォルト値でOKです。
+"""
+    elif require_safety_check:
+        # てんさくモード（後方互換）：rule_signals が渡されない場合は従来どおりGeminiのみで判定
         prompt = f"""
 あなたは小学生向けSNSの分析AIです。以下の投稿を分析し、JSON形式で結果を返してください。
 

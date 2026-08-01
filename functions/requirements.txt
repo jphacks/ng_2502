@@ -17,3 +17,10 @@ requests==2.31.0
 
 # 環境変数管理
 python-dotenv==1.0.1
+
+# 日本語NLP（投稿安全判定用、functions/safety配下で使用）
+sudachipy==0.6.11
+sudachidict_core==20260723
+ginza==5.2.0
+ja-ginza==5.2.0
+

@@ -18,6 +18,7 @@ from functions.gemini_utils import (
     gemini_model,
     sanitize_ai_output,
 )
+from functions.safety.pipeline import analyze_post_safety
 
 router = APIRouter()
 
@@ -165,15 +166,22 @@ async def create_post(
 
     # --- 安全性チェック（同期のまま） ---
     if payload.imageUrl:
+        # 画像投稿はルールベース判定エンジンの対象外（docs/spec_post_safety_check.md 1.2）
         analysis = await validate_and_analyze_post_with_image(
             payload.content,
             payload.imageUrl,
             require_safety_check=is_tensai_mode
         )
     else:
+        # ルールベース判定エンジンは両モードで実行するが、結果を使うのは添削モードのみ。
+        # 自由モードでの検出結果は保存・表示せず破棄する（仕様3.2）。
+        safety_result = await loop.run_in_executor(None, analyze_post_safety, payload.content)
+        rule_signals = safety_result.to_gemini_input() if is_tensai_mode else None
+
         analysis = await validate_and_analyze_post(
             payload.content,
-            require_safety_check=is_tensai_mode
+            require_safety_check=is_tensai_mode,
+            rule_signals=rule_signals
         )
 
     if is_tensai_mode and not analysis["is_safe"]:

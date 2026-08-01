@@ -22,6 +22,13 @@ app = FastAPI()
 init_firebase()
 #Firebase初期化関数を実行
 
+# 投稿安全判定エンジン(GiNZA)の辞書をリクエスト毎ではなくアプリ起動時に一度だけロードする（仕様6.2）
+try:
+    from functions.safety.tokenizer import preload_tokenizer
+    preload_tokenizer()
+except Exception as e:
+    print(f"投稿安全判定エンジンの初期化に失敗しました（辞書・正規表現判定のみで続行します）: {e}")
+
 
 app.add_middleware(
     CORSMiddleware,
